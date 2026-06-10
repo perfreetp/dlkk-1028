@@ -5,7 +5,7 @@ import classnames from 'classnames';
 import styles from './index.module.scss';
 import { useBabyStore } from '@/store';
 import { getBabyAge, dayjs, calcBMI, getBMICategory, roundTo } from '@/utils';
-import { getDateRange, downloadReport, shareReport } from '@/utils/export';
+import { showDoctorReportPicker } from '@/utils/export';
 
 const typeTabs = [
   { key: 'weight', label: '体重', unit: 'kg' },
@@ -95,28 +95,14 @@ const GrowthPage: React.FC = () => {
       Taro.showToast({ title: '请先设置宝宝信息', icon: 'none' });
       return;
     }
-    Taro.showActionSheet({
-      itemList: ['导出生成HTML报告（下载）', '分享给医生（复制摘要+下载）'],
-      success: (res) => {
-        const { startDate, endDate } = getDateRange('month');
-        const summary = getPeriodSummary('month');
-        const rangeRecords = getRecordsByDateRange(startDate, endDate);
-        const params = {
-          baby,
-          familyMembers,
-          records: rangeRecords,
-          growthRecords,
-          reminders,
-          startDate,
-          endDate,
-          summary
-        };
-        if (res.tapIndex === 0) {
-          downloadReport(params);
-        } else if (res.tapIndex === 1) {
-          shareReport(params);
-        }
-      }
+    showDoctorReportPicker({
+      baby,
+      allRecords: records,
+      growthRecords,
+      reminders,
+      familyMembers,
+      getPeriodSummary,
+      getRecordsByDateRange
     });
   };
 

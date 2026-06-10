@@ -55,6 +55,17 @@
   background: $color-bg-tag;
   padding: 4rpx 12rpx;
   border-radius: $radius-round;
+  margin-left: 8rpx;
+}
+
+.updaterTag {
+  background: rgba(125, 109, 231, 0.1);
+  color: #7D6DE7;
+  padding: 4rpx 16rpx;
+  border-radius: 20rpx;
+  font-size: 20rpx;
+  margin-left: 8rpx;
+  white-space: nowrap;
 }
 
 .detailRow {

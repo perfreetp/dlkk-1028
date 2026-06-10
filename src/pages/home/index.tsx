@@ -19,14 +19,18 @@ const quickActions = [
 ];
 
 const HomePage: React.FC = () => {
-  const getCurrentBaby = useBabyStore((s) => s.getCurrentBaby);
-  const getRecordsByDate = useBabyStore((s) => s.getRecordsByDate);
-  const getDailyStats = useBabyStore((s) => s.getDailyStats);
-  const getPeriodSummary = useBabyStore((s) => s.getPeriodSummary);
-  const getRecordsByDateRange = useBabyStore((s) => s.getRecordsByDateRange);
-  const undoRecord = useBabyStore((s) => s.undoRecord);
-  const redoRecord = useBabyStore((s) => s.redoRecord);
-  const historyStack = useBabyStore((s) => s.historyStack);
+  const {
+    getCurrentBaby,
+    getRecordsByDate,
+    getDailyStats,
+    getPeriodSummary,
+    getRecordsByDateRange,
+    undoRecord,
+    redoRecord,
+    historyStack,
+    canEdit
+  } = useBabyStore();
+  const currentCanEdit = canEdit();
 
   const [dateTab, setDateTab] = useState<'today' | 'yesterday' | 'week' | 'month'>('today');
   const [showUndo, setShowUndo] = useState(false);
@@ -61,6 +65,10 @@ const HomePage: React.FC = () => {
   }, [dateTab, targetDate, currentSummary, getRecordsByDate, getRecordsByDateRange]);
 
   const handleQuickAction = (key: string) => {
+    if (!currentCanEdit && key !== 'more') {
+      Taro.showToast({ title: '仅可查看，请切换为可编辑成员', icon: 'none' });
+      return;
+    }
     const pageMap: Record<string, string> = {
       breast: '/pages/feeding-edit/index?type=breast',
       formula: '/pages/feeding-edit/index?type=formula',
@@ -101,6 +109,10 @@ const HomePage: React.FC = () => {
   };
 
   const handleNightMode = () => {
+    if (!currentCanEdit) {
+      Taro.showToast({ title: '仅可查看，请切换为可编辑成员', icon: 'none' });
+      return;
+    }
     Taro.showActionSheet({
       itemList: ['快速母乳（左）', '快速母乳（右）', '快速配方奶120ml', '快速换尿布', '快速睡眠开始'],
       success: (res) => {
@@ -188,6 +200,7 @@ const HomePage: React.FC = () => {
             <View
               key={item.key}
               className={styles.quickItem}
+              style={{ opacity: currentCanEdit || item.key === 'more' ? 1 : 0.45 }}
               onClick={() => handleQuickAction(item.key)}
             >
               <View className={styles.quickIcon} style={{ background: item.color }}>
@@ -308,7 +321,7 @@ const HomePage: React.FC = () => {
       </View>
     </ScrollView>
 
-    <View className={styles.nightModeBtn} onClick={handleNightMode}>
+    <View className={styles.nightModeBtn} style={{ opacity: currentCanEdit ? 1 : 0.45 }} onClick={handleNightMode}>
       <Text className={styles.nightIcon}>🌙</Text>
       <Text className={styles.nightText}>夜间</Text>
     </View>

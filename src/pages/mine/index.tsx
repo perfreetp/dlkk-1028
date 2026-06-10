@@ -5,18 +5,21 @@ import classnames from 'classnames';
 import styles from './index.module.scss';
 import { useBabyStore } from '@/store';
 import { getBabyAge, dayjs } from '@/utils';
-import { getDateRange, downloadReport } from '@/utils/export';
+import { showDoctorReportPicker } from '@/utils/export';
 
 const MinePage: React.FC = () => {
-  const getCurrentBaby = useBabyStore((s) => s.getCurrentBaby);
-  const familyMembers = useBabyStore((s) => s.familyMembers);
-  const currentUserId = useBabyStore((s) => s.currentUserId);
-  const records = useBabyStore((s) => s.records);
-  const reminders = useBabyStore((s) => s.reminders);
-  const growthRecords = useBabyStore((s) => s.growthRecords);
-  const getPeriodSummary = useBabyStore((s) => s.getPeriodSummary);
-  const getRecordsByDateRange = useBabyStore((s) => s.getRecordsByDateRange);
-  const resetAll = useBabyStore((s) => s.resetAll);
+  const {
+    getCurrentBaby,
+    familyMembers,
+    currentUserId,
+    records,
+    reminders,
+    growthRecords,
+    getPeriodSummary,
+    getRecordsByDateRange,
+    resetAll,
+    canEdit
+  } = useBabyStore();
 
   const currentUser = useMemo(() => {
     return familyMembers.find((m) => m.id === currentUserId);
@@ -39,27 +42,14 @@ const MinePage: React.FC = () => {
           Taro.showToast({ title: '请先设置宝宝信息', icon: 'none' });
           return;
         }
-        Taro.showActionSheet({
-          itemList: ['导出本周报告', '导出本月报告', '自定义区间（默认本月）'],
-          success: (res) => {
-            let type: 'week' | 'month' = 'month';
-            if (res.tapIndex === 0) type = 'week';
-            else if (res.tapIndex === 1) type = 'month';
-            else type = 'month';
-            const { startDate, endDate } = getDateRange(type);
-            const summary = getPeriodSummary(type);
-            const rangeRecords = getRecordsByDateRange(startDate, endDate);
-            downloadReport({
-              baby,
-              familyMembers,
-              records: rangeRecords,
-              growthRecords,
-              reminders,
-              startDate,
-              endDate,
-              summary
-            });
-          }
+        showDoctorReportPicker({
+          baby,
+          allRecords: records,
+          growthRecords,
+          reminders,
+          familyMembers,
+          getPeriodSummary,
+          getRecordsByDateRange
         });
       }
     },
@@ -169,11 +159,33 @@ const MinePage: React.FC = () => {
             {currentUser ? memberEmoji[currentUser.role] : '👤'}
           </View>
           <View className={styles.userDetail}>
-            <View className={styles.userName}>{currentUser?.name || '用户'}</View>
+            <View className={styles.userName}>
+              {currentUser?.name || '用户'}
+              <View
+                style={{
+                  display: 'inline-block',
+                  marginLeft: 12,
+                  padding: '4rpx 16rpx',
+                  borderRadius: 20,
+                  fontSize: 22,
+                  background: canEdit() ? 'rgba(77, 170, 87, 0.1)' : 'rgba(144, 147, 153, 0.12)',
+                  color: canEdit() ? '#4DAA57' : '#909399',
+                  verticalAlign: 'middle'
+                }}
+              >
+                {canEdit() ? '可编辑' : '仅查看'}
+              </View>
+            </View>
             <View className={styles.userRole}>
               <Text className={styles.roleTag}>{currentUser?.roleName || '管理员'}</Text>
               <Text>家庭管理员</Text>
             </View>
+          </View>
+          <View
+            className={styles.switchIdentityBtn}
+            onClick={() => Taro.navigateTo({ url: '/pages/family/index' })}
+          >
+            切换身份
           </View>
         </View>
       </View>

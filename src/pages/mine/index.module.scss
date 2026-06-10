@@ -55,6 +55,17 @@
   font-size: $font-size-xs;
 }
 
+.switchIdentityBtn {
+  @include button-reset;
+  padding: $spacing-xs $spacing-md;
+  border-radius: $radius-button;
+  background: rgba(255, 255, 255, 0.25);
+  color: $color-text-white;
+  font-size: $font-size-xs;
+  font-weight: $font-weight-medium;
+  border: 2rpx solid rgba(255, 255, 255, 0.4);
+}
+
 .babySection {
   margin: -60rpx $spacing-lg 0;
   background: $color-bg-card;

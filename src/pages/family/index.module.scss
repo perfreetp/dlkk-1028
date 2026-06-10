@@ -337,3 +337,30 @@
   font-weight: $font-weight-semibold;
   box-shadow: 0 4rpx 16rpx rgba(255, 139, 167, 0.3);
 }
+
+.editBtn {
+  @include button-reset;
+  padding: $spacing-sm $spacing-md;
+  background: rgba($color-primary, 0.12);
+  color: $color-primary;
+  border-radius: $radius-button;
+  font-size: $font-size-sm;
+  font-weight: $font-weight-semibold;
+}
+
+.modalActions {
+  display: flex;
+  gap: $spacing-md;
+  margin-top: $spacing-xl;
+}
+
+.cancelBtn {
+  @include button-reset;
+  flex: 1;
+  height: $button-height-lg;
+  border-radius: $radius-button;
+  background: $color-bg-hover;
+  font-size: $font-size-md;
+  color: $color-text-secondary;
+  font-weight: $font-weight-semibold;
+}

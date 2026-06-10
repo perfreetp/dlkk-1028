@@ -6,6 +6,7 @@ import styles from './index.module.scss';
 import { useBabyStore } from '@/store';
 import RecordCard from '@/components/RecordCard';
 import { formatDate, dayjs, formatDuration } from '@/utils';
+import { showDoctorReportPicker } from '@/utils/export';
 
 const typeTabs = [
   { key: 'all', label: '全部' },
@@ -16,11 +17,17 @@ const typeTabs = [
 ];
 
 const RecordPage: React.FC = () => {
-  const records = useBabyStore((s) => s.records);
-  const getDailyStats = useBabyStore((s) => s.getDailyStats);
-  const getPeriodSummary = useBabyStore((s) => s.getPeriodSummary);
-  const getRecordsByDateRange = useBabyStore((s) => s.getRecordsByDateRange);
-  const deleteRecord = useBabyStore((s) => s.deleteRecord);
+  const {
+    records,
+    getDailyStats,
+    getPeriodSummary,
+    getRecordsByDateRange,
+    deleteRecord,
+    getCurrentBaby,
+    familyMembers,
+    growthRecords,
+    reminders
+  } = useBabyStore();
 
   const [activeTab, setActiveTab] = useState('all');
   const [selectedDate, setSelectedDate] = useState(dayjs().format('YYYY-MM-DD'));
@@ -97,6 +104,23 @@ const RecordPage: React.FC = () => {
           Taro.showToast({ title: '编辑功能', icon: 'none' });
         }
       }
+    });
+  };
+
+  const handleExport = () => {
+    const baby = getCurrentBaby();
+    if (!baby) {
+      Taro.showToast({ title: '请先设置宝宝信息', icon: 'none' });
+      return;
+    }
+    showDoctorReportPicker({
+      baby,
+      allRecords: records,
+      growthRecords,
+      reminders,
+      familyMembers,
+      getPeriodSummary,
+      getRecordsByDateRange
     });
   };
 
@@ -180,7 +204,7 @@ const RecordPage: React.FC = () => {
           <View className={styles.filterBtn} onClick={() => Taro.showToast({ title: '搜索', icon: 'none' })}>
             🔍 搜索
           </View>
-          <View className={styles.filterBtn} onClick={() => Taro.showToast({ title: '导出', icon: 'none' })}>
+          <View className={styles.filterBtn} onClick={handleExport}>
             📤 导出
           </View>
         </View>

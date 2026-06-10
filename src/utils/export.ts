@@ -66,6 +66,17 @@ const buildReportHTML = (opt: BuildReportOptions): string => {
   const foodList = records.filter((r) => r.type === 'food');
   const upcomingReminders = reminders.filter((r) => !r.completed).slice(0, 20);
 
+  const abnormalRecords = records.filter((r: any) => {
+    if (r.note && r.note.trim().length > 0) return true;
+    if (r.type === 'diaper') return r.color === 'red' || r.color === 'black' || r.texture === 'watery' || r.texture === 'mucus';
+    return false;
+  });
+  const allergyRecords = records.filter((r: any) => r.type === 'food' && r.allergyReaction && r.allergyReaction !== 'none');
+  const vaccinePlan = reminders.filter((r) => r.type === 'vaccine');
+  const checkupPlan = reminders.filter((r) => r.type === 'checkup');
+  const photoRecords = records.filter((r: any) => r.photos?.length);
+  const totalPhotos = photoRecords.reduce((sum: number, r: any) => sum + r.photos!.length, 0);
+
   return `<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
@@ -298,6 +309,107 @@ const buildReportHTML = (opt: BuildReportOptions): string => {
       </tbody></table>`).join('')}
   </div>` : ''}
 
+  ${abnormalRecords.length > 0 ? `
+  <div class="section">
+    <div class="section-title"><span class="emoji">🚨</span>异常记录与医生关注点（${abnormalRecords.length}条）</div>
+    <table><thead><tr>
+      <th>日期时间</th><th>类型</th><th>异常原因</th><th>详情</th><th>操作人</th>
+    </tr></thead><tbody>
+      ${abnormalRecords.map((r: any) => {
+        const reasons: string[] = [];
+        if (r.type === 'diaper') {
+          if (r.color === 'red' || r.color === 'black') reasons.push(`异常便色：${colorBadge(r.color)}色`);
+          if (r.texture === 'watery' || r.texture === 'mucus') reasons.push(`异常形态：${textureBadge(r.texture)}`);
+        }
+        if (r.note?.trim()) reasons.push('有备注说明');
+        let detail = '-';
+        if (r.type === 'diaper') {
+          detail = `${({pee:'小便',poop:'大便',both:'大小便'} as any)[r.diaperType]} · ${colorBadge(r.color)} · ${textureBadge(r.texture)}`;
+        } else if (r.type === 'breast') {
+          detail = `左${r.leftDuration||0}分/右${r.rightDuration||0}分/共${r.totalDuration||0}分`;
+        } else if (r.type === 'formula') {
+          detail = `${r.waterAmount}ml水+${r.powderAmount}勺`;
+        } else if (r.type === 'bottle') {
+          detail = `${r.amount}ml`;
+        } else if (r.type === 'food') {
+          detail = `${r.foodName} ${r.amount}${r.unit}`;
+        } else if (r.type === 'sleep') {
+          detail = `${formatDuration(r.duration||0)} · 质量：${qualityBadge(r.quality)}`;
+        }
+        return `<tr>
+          <td>${dayjs(r.time).format('YYYY-MM-DD HH:mm')}</td>
+          <td><span class="tag">${getRecordTypeLabel(r.type)}</span></td>
+          <td style="color:#FF4D4F;font-weight:600">${reasons.join('；')}</td>
+          <td>${htmlEscape(detail)}${r.note?.trim() ? `<div class="note" style="margin-top:4px">📝 ${htmlEscape(r.note)}</div>` : ''}</td>
+          <td>${htmlEscape(memberName(r.createdBy))}</td>
+        </tr>`;
+      }).join('')}
+    </tbody></table>
+  </div>` : ''}
+
+  ${allergyRecords.length > 0 ? `
+  <div class="section">
+    <div class="section-title"><span class="emoji">🥣</span>辅食过敏反应汇总（${allergyRecords.length}次）</div>
+    <table><thead><tr>
+      <th>日期</th><th>辅食名称</th><th>食材</th><th>过敏反应</th><th>反应详情</th><th>操作人</th>
+    </tr></thead><tbody>
+      ${allergyRecords.map((r: any) => `<tr>
+        <td>${dayjs(r.time).format('YYYY-MM-DD HH:mm')}</td>
+        <td><b>${htmlEscape(r.foodName)}</b></td>
+        <td>${(r.ingredients||[]).map((i:string)=>`<span class="tag tag-n">${htmlEscape(i)}</span>`).join('')}</td>
+        <td><span class="tag tag-w">${allergyBadge(r.allergyReaction)}</span></td>
+        <td class="note" style="color:#C9762A">${htmlEscape(r.reactionDetail || r.note || '-')}</td>
+        <td>${htmlEscape(memberName(r.createdBy))}</td>
+      </tr>`).join('')}
+    </tbody></table>
+  </div>` : ''}
+
+  ${vaccinePlan.length > 0 ? `
+  <div class="section">
+    <div class="section-title"><span class="emoji">💉</span>疫苗计划（${vaccinePlan.length}项）</div>
+    <table><thead><tr>
+      <th>状态</th><th>疫苗名称</th><th>预约时间</th><th>备注</th>
+    </tr></thead><tbody>
+      ${vaccinePlan.map((r) => `<tr>
+        <td>${r.completed ? '<span class="tag tag-g">已完成</span>' : '<span class="tag tag-w">待接种</span>'}</td>
+        <td class="reminder-up">${htmlEscape(r.title)}</td>
+        <td>${htmlEscape(r.time || '-')}</td>
+        <td class="note">${htmlEscape(r.note)}</td>
+      </tr>`).join('')}
+    </tbody></table>
+  </div>` : ''}
+
+  ${checkupPlan.length > 0 ? `
+  <div class="section">
+    <div class="section-title"><span class="emoji">🏥</span>体检安排（${checkupPlan.length}项）</div>
+    <table><thead><tr>
+      <th>状态</th><th>体检项目</th><th>预约时间</th><th>备注</th>
+    </tr></thead><tbody>
+      ${checkupPlan.map((r) => `<tr>
+        <td>${r.completed ? '<span class="tag tag-g">已完成</span>' : '<span class="tag tag-w">待体检</span>'}</td>
+        <td class="reminder-up">${htmlEscape(r.title)}</td>
+        <td>${htmlEscape(r.time || '-')}</td>
+        <td class="note">${htmlEscape(r.note)}</td>
+      </tr>`).join('')}
+    </tbody></table>
+  </div>` : ''}
+
+  ${photoRecords.length > 0 ? `
+  <div class="section">
+    <div class="section-title"><span class="emoji">📷</span>照片附件摘要（共${totalPhotos}张，${photoRecords.length}条记录）</div>
+    <table><thead><tr>
+      <th>日期时间</th><th>记录类型</th><th>照片数</th><th>操作人</th><th>备注</th>
+    </tr></thead><tbody>
+      ${photoRecords.map((r: any) => `<tr>
+        <td>${dayjs(r.time).format('YYYY-MM-DD HH:mm')}</td>
+        <td><span class="tag">${getRecordTypeLabel(r.type)}</span></td>
+        <td><b style="color:#2A7DC9">${r.photos!.length}张</b></td>
+        <td>${htmlEscape(memberName(r.createdBy))}</td>
+        <td class="note">${htmlEscape(r.note || '-')}</td>
+      </tr>`).join('')}
+    </tbody></table>
+  </div>` : ''}
+
   <div class="footer">
     <span>👨‍👩‍👧 家庭成员：${familyMembers.map((m)=>`${m.name}(${m.roleName}${m.canEdit?'·可编辑':'·只读'})`).join('、')}</span>
     <span>本报告由宝宝喂养记录App自动生成 · 医生可据此参考宝宝日常情况</span>
@@ -396,4 +508,71 @@ export const shareReport = (opt: BuildReportOptions) => {
   } catch (e) { /* ignore */ }
   Taro.setClipboardData({ data: summary });
   Taro.showToast({ title: '摘要已复制', icon: 'success' });
+};
+
+export interface ReportRange { startDate: string; endDate: string; title: string; }
+export const showDoctorReportPicker = (
+  opts: {
+    baby: Baby;
+    allRecords: AllRecord[];
+    growthRecords: GrowthRecord[];
+    reminders: Reminder[];
+    familyMembers: FamilyMember[];
+    getPeriodSummary: any;
+    getRecordsByDateRange: any;
+    mode?: 'download' | 'share';
+  }
+): Promise<boolean> => {
+  return new Promise(async (resolve) => {
+    const rangeRes = await Taro.showActionSheet({
+      itemList: ['📅 本周数据', '📅 本月数据', '📅 近7天', '📅 近30天', '📅 自定义区间（默认本月）']
+    }).catch(() => null);
+    if (!rangeRes || rangeRes.tapIndex === undefined) { resolve(false); return; }
+    let range: ReportRange;
+    const today = dayjs();
+    switch (rangeRes.tapIndex) {
+      case 0: range = { startDate: today.startOf('week').format('YYYY-MM-DD'), endDate: today.endOf('week').format('YYYY-MM-DD'), title: '本周' }; break;
+      case 1: range = { startDate: today.startOf('month').format('YYYY-MM-DD'), endDate: today.endOf('month').format('YYYY-MM-DD'), title: '本月' }; break;
+      case 2: range = { startDate: today.subtract(6, 'day').format('YYYY-MM-DD'), endDate: today.format('YYYY-MM-DD'), title: '近7天' }; break;
+      case 3: range = { startDate: today.subtract(29, 'day').format('YYYY-MM-DD'), endDate: today.format('YYYY-MM-DD'), title: '近30天' }; break;
+      default: range = { startDate: today.startOf('month').format('YYYY-MM-DD'), endDate: today.endOf('month').format('YYYY-MM-DD'), title: '自定义' };
+    }
+    let modeFinal = opts.mode;
+    if (!modeFinal) {
+      const modeRes = await Taro.showActionSheet({
+        itemList: ['📄 下载HTML报告（可打印给医生）', '📤 分享（复制摘要+下载）']
+      }).catch(() => null);
+      if (!modeRes || modeRes.tapIndex === undefined) { resolve(false); return; }
+      modeFinal = modeRes.tapIndex === 0 ? 'download' : 'share';
+    }
+    const summary = opts.getPeriodSummary('day', range.endDate);
+    const inRange = opts.getRecordsByDateRange(range.startDate, range.endDate);
+    const dayCount = Math.max(1, dayjs(range.endDate).diff(dayjs(range.startDate), 'day') + 1);
+    let feedingCount = 0, feedingTotalAmount = 0, breastTotalDuration = 0;
+    let foodCount = 0, diaperCount = 0, sleepTotalDuration = 0, sleepCount = 0;
+    inRange.forEach((r: any) => {
+      if (r.type === 'breast') { feedingCount++; breastTotalDuration += r.totalDuration||0; }
+      else if (r.type === 'formula') { feedingCount++; feedingTotalAmount += r.waterAmount||0; }
+      else if (r.type === 'bottle') { feedingCount++; feedingTotalAmount += r.amount||0; }
+      else if (r.type === 'food') foodCount++;
+      else if (r.type === 'diaper') diaperCount++;
+      else if (r.type === 'sleep') { sleepCount++; sleepTotalDuration += r.duration||0; }
+    });
+    const periodSummary = {
+      date: range.endDate, period: 'month' as any, startDate: range.startDate, endDate: range.endDate, dayCount,
+      feedingCount, feedingTotalAmount, breastTotalDuration, foodCount, diaperCount, sleepTotalDuration, sleepCount
+    };
+    const params = {
+      baby: opts.baby,
+      familyMembers: opts.familyMembers,
+      records: inRange,
+      growthRecords: opts.growthRecords,
+      reminders: opts.reminders,
+      startDate: range.startDate,
+      endDate: range.endDate,
+      summary: periodSummary
+    };
+    const ok = modeFinal === 'download' ? downloadReport(params) : shareReport(params);
+    resolve(!!ok);
+  });
 };

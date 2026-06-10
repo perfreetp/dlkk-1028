@@ -39,6 +39,22 @@ export interface BaseRecord {
   createdAt: string;
   updatedAt: string;
   createdBy: string;
+  updatedBy?: string;
+}
+
+export type ActivityAction = 'add' | 'update' | 'delete' | 'complete' | 'toggle' | 'join_family' | 'switch_user' | 'change_permission';
+export type ActivityTarget = 'record' | 'growth' | 'reminder' | 'family' | 'permission';
+
+export interface ActivityLog {
+  id: string;
+  action: ActivityAction;
+  target: ActivityTarget;
+  targetId?: string;
+  targetType?: string;
+  summary?: string;
+  userId: string;
+  userName?: string;
+  createdAt: string;
 }
 
 export interface BreastFeedingRecord extends BaseRecord {

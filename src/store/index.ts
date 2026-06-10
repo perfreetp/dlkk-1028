@@ -7,11 +7,14 @@ import type {
   Reminder,
   FamilyMember,
   DailyStats,
-  HistoryStack
+  HistoryStack,
+  ActivityLog,
+  ActivityAction,
+  ActivityTarget
 } from '@/types';
 import { generateId, dayjs } from '@/utils';
 
-const STORAGE_KEY = 'baby_record_store_v1';
+const STORAGE_KEY = 'baby_record_store_v2';
 
 interface PeriodSummary extends DailyStats {
   period: 'day' | 'week' | 'month';
@@ -30,8 +33,9 @@ interface BabyStore {
   currentUserId: string;
   historyStack: HistoryStack;
   inviteCode: string;
+  activityLogs: ActivityLog[];
 
-  addRecord: (record: Omit<AllRecord, 'id' | 'createdAt' | 'updatedAt' | 'createdBy'>) => boolean;
+  addRecord: (record: Omit<AllRecord, 'id' | 'createdAt' | 'updatedAt' | 'createdBy' | 'updatedBy'>) => boolean;
   updateRecord: (id: string, updates: Partial<AllRecord>) => boolean;
   deleteRecord: (id: string) => boolean;
   undoRecord: () => boolean;
@@ -50,6 +54,7 @@ interface BabyStore {
   acceptInviteCode: (code: string, name: string) => FamilyMember | null;
   canEdit: () => boolean;
   canCurrentUser: (action: 'add' | 'edit' | 'delete') => boolean;
+  setCurrentUser: (userId: string) => boolean;
 
   getRecordsByDate: (date: string) => AllRecord[];
   getRecordsByDateRange: (startDate: string, endDate: string) => AllRecord[];
@@ -59,6 +64,7 @@ interface BabyStore {
   getPeriodSummary: (type: 'week' | 'month' | 'day', date?: string) => PeriodSummary;
   getMemberById: (id: string) => FamilyMember | undefined;
   getCurrentBaby: () => Baby | undefined;
+  getRecentActivity: (limit?: number) => ActivityLog[];
   resetAll: () => void;
 }
 
@@ -80,14 +86,14 @@ const mockMembers: FamilyMember[] = [
 
 const now = dayjs();
 const mockRecords: AllRecord[] = [
-  { id: generateId(), type: 'breast', side: 'both', leftDuration: 12, rightDuration: 10, totalDuration: 22, time: now.subtract(1, 'hour').toISOString(), note: '吃得很认真', createdAt: now.toISOString(), updatedAt: now.toISOString(), createdBy: 'user_1' } as any,
-  { id: generateId(), type: 'diaper', diaperType: 'pee', color: 'yellow', texture: 'normal', amount: 'medium', time: now.subtract(2, 'hour').toISOString(), createdAt: now.toISOString(), updatedAt: now.toISOString(), createdBy: 'user_1' } as any,
-  { id: generateId(), type: 'sleep', startTime: now.subtract(3, 'hour').toISOString(), endTime: now.subtract(1, 'hour').add(30, 'minute').toISOString(), duration: 90, quality: 'good', time: now.subtract(3, 'hour').toISOString(), environment: '安静，小夜灯', createdAt: now.toISOString(), updatedAt: now.toISOString(), createdBy: 'user_3' } as any,
-  { id: generateId(), type: 'formula', powderAmount: 4, waterAmount: 120, waterTemp: 45, brand: '爱他美', time: now.subtract(4, 'hour').toISOString(), createdAt: now.toISOString(), updatedAt: now.toISOString(), createdBy: 'user_3' } as any,
-  { id: generateId(), type: 'food', foodName: '苹果泥米糊', ingredients: ['苹果', '米粉'], amount: 60, unit: 'g', allergyReaction: 'none', time: now.subtract(6, 'hour').toISOString(), note: '第一次吃，很喜欢', createdAt: now.toISOString(), updatedAt: now.toISOString(), createdBy: 'user_1' } as any,
-  { id: generateId(), type: 'breast', side: 'left', leftDuration: 15, totalDuration: 15, time: now.subtract(8, 'hour').toISOString(), createdAt: now.toISOString(), updatedAt: now.toISOString(), createdBy: 'user_2' } as any,
-  { id: generateId(), type: 'diaper', diaperType: 'poop', color: 'yellow', texture: 'normal', amount: 'large', time: now.subtract(10, 'hour').toISOString(), createdAt: now.toISOString(), updatedAt: now.toISOString(), createdBy: 'user_2' } as any,
-  { id: generateId(), type: 'sleep', startTime: now.subtract(12, 'hour').toISOString(), endTime: now.subtract(10, 'hour').toISOString(), duration: 120, quality: 'normal', time: now.subtract(12, 'hour').toISOString(), createdAt: now.toISOString(), updatedAt: now.toISOString(), createdBy: 'user_1' } as any
+  { id: generateId(), type: 'breast', side: 'both', leftDuration: 12, rightDuration: 10, totalDuration: 22, time: now.subtract(1, 'hour').toISOString(), note: '吃得很认真', createdAt: now.toISOString(), updatedAt: now.toISOString(), createdBy: 'user_1', updatedBy: 'user_1' } as any,
+  { id: generateId(), type: 'diaper', diaperType: 'pee', color: 'yellow', texture: 'normal', amount: 'medium', time: now.subtract(2, 'hour').toISOString(), createdAt: now.toISOString(), updatedAt: now.toISOString(), createdBy: 'user_1', updatedBy: 'user_1' } as any,
+  { id: generateId(), type: 'sleep', startTime: now.subtract(3, 'hour').toISOString(), endTime: now.subtract(1, 'hour').add(30, 'minute').toISOString(), duration: 90, quality: 'good', time: now.subtract(3, 'hour').toISOString(), environment: '安静，小夜灯', createdAt: now.toISOString(), updatedAt: now.toISOString(), createdBy: 'user_3', updatedBy: 'user_3' } as any,
+  { id: generateId(), type: 'formula', powderAmount: 4, waterAmount: 120, waterTemp: 45, brand: '爱他美', time: now.subtract(4, 'hour').toISOString(), createdAt: now.toISOString(), updatedAt: now.toISOString(), createdBy: 'user_3', updatedBy: 'user_3' } as any,
+  { id: generateId(), type: 'food', foodName: '苹果泥米糊', ingredients: ['苹果', '米粉'], amount: 60, unit: 'g', allergyReaction: 'none', time: now.subtract(6, 'hour').toISOString(), note: '第一次吃，很喜欢', createdAt: now.toISOString(), updatedAt: now.toISOString(), createdBy: 'user_1', updatedBy: 'user_1' } as any,
+  { id: generateId(), type: 'breast', side: 'left', leftDuration: 15, totalDuration: 15, time: now.subtract(8, 'hour').toISOString(), createdAt: now.toISOString(), updatedAt: now.toISOString(), createdBy: 'user_2', updatedBy: 'user_2' } as any,
+  { id: generateId(), type: 'diaper', diaperType: 'poop', color: 'yellow', texture: 'normal', amount: 'large', time: now.subtract(10, 'hour').toISOString(), createdAt: now.toISOString(), updatedAt: now.toISOString(), createdBy: 'user_2', updatedBy: 'user_2' } as any,
+  { id: generateId(), type: 'sleep', startTime: now.subtract(12, 'hour').toISOString(), endTime: now.subtract(10, 'hour').toISOString(), duration: 120, quality: 'normal', time: now.subtract(12, 'hour').toISOString(), createdAt: now.toISOString(), updatedAt: now.toISOString(), createdBy: 'user_1', updatedBy: 'user_1' } as any
 ];
 
 const mockGrowth: GrowthRecord[] = [
@@ -108,6 +114,20 @@ const mockReminders: Reminder[] = [
   { id: generateId(), type: 'checkup', title: '6个月体检', time: now.add(15, 'day').format('YYYY-MM-DD 09:30'), repeat: 'none', enabled: true, note: '儿保科', createdAt: now.toISOString() }
 ];
 
+const mockActivity: ActivityLog[] = [
+  { id: generateId(), action: 'add', target: 'record', targetType: 'breast', summary: '记录母乳22分钟', userId: 'user_1', userName: '妈妈', createdAt: now.subtract(1, 'hour').toISOString() },
+  { id: generateId(), action: 'add', target: 'record', targetType: 'diaper', summary: '记录小便', userId: 'user_1', userName: '妈妈', createdAt: now.subtract(2, 'hour').toISOString() },
+  { id: generateId(), action: 'add', target: 'record', targetType: 'sleep', summary: '记录睡眠90分钟', userId: 'user_3', userName: '李阿姨', createdAt: now.subtract(1, 'hour').add(30, 'minute').toISOString() },
+  { id: generateId(), action: 'add', target: 'record', targetType: 'formula', summary: '记录配方奶120ml', userId: 'user_3', userName: '李阿姨', createdAt: now.subtract(4, 'hour').toISOString() },
+  { id: generateId(), action: 'add', target: 'record', targetType: 'food', summary: '添加辅食苹果泥米糊', userId: 'user_1', userName: '妈妈', createdAt: now.subtract(6, 'hour').toISOString() },
+  { id: generateId(), action: 'add', target: 'record', targetType: 'breast', summary: '记录母乳15分钟', userId: 'user_2', userName: '爸爸', createdAt: now.subtract(8, 'hour').toISOString() },
+  { id: generateId(), action: 'add', target: 'record', targetType: 'diaper', summary: '记录大便', userId: 'user_2', userName: '爸爸', createdAt: now.subtract(10, 'hour').toISOString() },
+  { id: generateId(), action: 'add', target: 'record', targetType: 'sleep', summary: '记录睡眠2小时', userId: 'user_1', userName: '妈妈', createdAt: now.subtract(10, 'hour').toISOString() },
+  { id: generateId(), action: 'add', target: 'growth', summary: '录入成长数据', userId: 'user_1', userName: '妈妈', createdAt: now.subtract(2, 'day').toISOString() },
+  { id: generateId(), action: 'change_permission', target: 'permission', summary: '为李阿姨开启编辑权限', userId: 'user_1', userName: '妈妈', createdAt: now.subtract(3, 'day').toISOString() },
+  { id: generateId(), action: 'add', target: 'family', summary: '添加家庭成员李阿姨', userId: 'user_1', userName: '妈妈', createdAt: now.subtract(7, 'day').toISOString() }
+];
+
 const defaults = {
   currentBabyId: 'baby_1',
   babies: [mockBaby],
@@ -117,14 +137,15 @@ const defaults = {
   familyMembers: mockMembers,
   currentUserId: 'user_1',
   historyStack: { records: [], cursor: -1 } as HistoryStack,
-  inviteCode: ''
+  inviteCode: '',
+  activityLogs: mockActivity
 };
 
 type PersistState = Omit<BabyStore,
   'addRecord' | 'updateRecord' | 'deleteRecord' | 'undoRecord' | 'redoRecord' |
   'addGrowthRecord' | 'addReminder' | 'updateReminder' | 'toggleReminder' | 'completeReminder' |
-  'addFamilyMember' | 'updateFamilyMember' | 'removeFamilyMember' | 'generateInviteCode' | 'acceptInviteCode' | 'canEdit' | 'canCurrentUser' |
-  'getRecordsByDate' | 'getRecordsByDateRange' | 'getRecordsByType' | 'getDailyStats' | 'getWeeklyStats' | 'getPeriodSummary' | 'getMemberById' | 'getCurrentBaby' | 'resetAll'
+  'addFamilyMember' | 'updateFamilyMember' | 'removeFamilyMember' | 'generateInviteCode' | 'acceptInviteCode' | 'canEdit' | 'canCurrentUser' | 'setCurrentUser' |
+  'getRecordsByDate' | 'getRecordsByDateRange' | 'getRecordsByType' | 'getDailyStats' | 'getWeeklyStats' | 'getPeriodSummary' | 'getMemberById' | 'getCurrentBaby' | 'getRecentActivity' | 'resetAll'
 >;
 
 const loadFromStorage = (): PersistState | null => {
@@ -152,7 +173,8 @@ const saveToStorage = (state: PersistState) => {
       familyMembers: state.familyMembers,
       currentUserId: state.currentUserId,
       historyStack: state.historyStack,
-      inviteCode: state.inviteCode
+      inviteCode: state.inviteCode,
+      activityLogs: state.activityLogs
     };
     const str = JSON.stringify(data);
     if (typeof Taro !== 'undefined' && Taro.setStorageSync) {
@@ -216,6 +238,10 @@ const summarizeStats = (stats: DailyStats[], period: 'day' | 'week' | 'month', s
   };
 };
 
+const typeMap4Summary: Record<string, string> = {
+  breast: '母乳', formula: '配方奶', bottle: '瓶喂', food: '辅食', diaper: '尿布', sleep: '睡眠'
+};
+
 export const useBabyStore = create<BabyStore>((set, get) => ({
   ...initial,
 
@@ -232,24 +258,74 @@ export const useBabyStore = create<BabyStore>((set, get) => ({
     return action === 'delete' ? canEdit : false;
   },
 
-  addRecord: (recordData) => {
-    if (!get().canCurrentUser('add')) {
-      typeof Taro !== 'undefined' && Taro.showToast && Taro.showToast({ title: '无新增权限', icon: 'none' });
+  setCurrentUser: (userId) => {
+    const { familyMembers, currentUserId } = get();
+    if (userId === currentUserId) return false;
+    const target = familyMembers.find((m) => m.id === userId);
+    if (!target) {
+      Taro.showToast({ title: '成员不存在', icon: 'none' });
       return false;
     }
+    const member = get().familyMembers.find((m) => m.id === currentUserId);
+    const activityLog: ActivityLog = {
+      id: generateId(),
+      action: 'switch_user',
+      target: 'family',
+      summary: `切换身份为「${target.name}」${target.canEdit ? '（可编辑）' : '（仅查看）'}`,
+      userId,
+      userName: target.name,
+      createdAt: new Date().toISOString()
+    };
+    set((state) => {
+      const next = {
+        currentUserId: userId,
+        activityLogs: [activityLog, ...state.activityLogs].slice(0, 500)
+      };
+      saveToStorage({ ...state, ...next });
+      return next;
+    });
+    Taro.showToast({
+      title: target.canEdit ? `已切换为「${target.name}」` : `「${target.name}」仅可查看`,
+      icon: 'none'
+    });
+    void member;
+    return true;
+  },
+
+  addRecord: (recordData) => {
+    if (!get().canCurrentUser('add')) {
+      typeof Taro !== 'undefined' && Taro.showToast && Taro.showToast({ title: '当前身份无新增权限', icon: 'none' });
+      return false;
+    }
+    const now2 = new Date().toISOString();
+    const uid = get().currentUserId;
+    const member = get().familyMembers.find((m) => m.id === uid);
     const newRecord = {
       ...recordData,
       id: generateId(),
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      createdBy: get().currentUserId
+      createdAt: now2,
+      updatedAt: now2,
+      createdBy: uid,
+      updatedBy: uid
     } as AllRecord;
+    const activityLog: ActivityLog = {
+      id: generateId(),
+      action: 'add',
+      target: 'record',
+      targetId: newRecord.id,
+      targetType: newRecord.type,
+      summary: `新增${typeMap4Summary[newRecord.type] || '记录'}${newRecord.note ? '（含备注）' : ''}`,
+      userId: uid,
+      userName: member?.name,
+      createdAt: now2
+    };
     set((state) => {
       const newRecords = [...state.records, newRecord];
       const stack = state.historyStack.records.slice(0, state.historyStack.cursor + 1);
       const next = {
         records: newRecords,
-        historyStack: { records: [...stack, newRecord], cursor: stack.length }
+        historyStack: { records: [...stack, newRecord], cursor: stack.length },
+        activityLogs: [activityLog, ...state.activityLogs].slice(0, 500)
       };
       saveToStorage({ ...state, ...next });
       return next;
@@ -259,14 +335,30 @@ export const useBabyStore = create<BabyStore>((set, get) => ({
 
   updateRecord: (id, updates) => {
     if (!get().canCurrentUser('edit')) {
-      Taro.showToast({ title: '无修改权限', icon: 'none' });
+      Taro.showToast({ title: '当前身份无修改权限', icon: 'none' });
       return false;
     }
+    const uid = get().currentUserId;
+    const member = get().familyMembers.find((m) => m.id === uid);
+    const original = get().records.find((r) => r.id === id);
+    if (!original) return false;
+    const activityLog: ActivityLog = {
+      id: generateId(),
+      action: 'update',
+      target: 'record',
+      targetId: id,
+      targetType: original.type,
+      summary: `修改${typeMap4Summary[original.type] || '记录'}`,
+      userId: uid,
+      userName: member?.name,
+      createdAt: new Date().toISOString()
+    };
     set((state) => {
       const next = {
         records: state.records.map((r) =>
-          r.id === id ? { ...r, ...updates, updatedAt: new Date().toISOString() } : r
-        )
+          r.id === id ? { ...r, ...updates, updatedAt: new Date().toISOString(), updatedBy: uid } : r
+        ),
+        activityLogs: [activityLog, ...state.activityLogs].slice(0, 500)
       };
       saveToStorage({ ...state, ...next });
       return next;
@@ -276,11 +368,28 @@ export const useBabyStore = create<BabyStore>((set, get) => ({
 
   deleteRecord: (id) => {
     if (!get().canCurrentUser('delete')) {
-      Taro.showToast({ title: '无删除权限', icon: 'none' });
+      Taro.showToast({ title: '当前身份无删除权限', icon: 'none' });
       return false;
     }
+    const uid = get().currentUserId;
+    const member = get().familyMembers.find((m) => m.id === uid);
+    const original = get().records.find((r) => r.id === id);
+    const activityLog: ActivityLog = {
+      id: generateId(),
+      action: 'delete',
+      target: 'record',
+      targetId: id,
+      targetType: original?.type,
+      summary: `删除${typeMap4Summary[original?.type || ''] || '记录'}`,
+      userId: uid,
+      userName: member?.name,
+      createdAt: new Date().toISOString()
+    };
     set((state) => {
-      const next = { records: state.records.filter((r) => r.id !== id) };
+      const next = {
+        records: state.records.filter((r) => r.id !== id),
+        activityLogs: [activityLog, ...state.activityLogs].slice(0, 500)
+      };
       saveToStorage({ ...state, ...next });
       return next;
     });
@@ -320,12 +429,27 @@ export const useBabyStore = create<BabyStore>((set, get) => ({
 
   addGrowthRecord: (recordData) => {
     if (!get().canCurrentUser('add')) {
-      Taro.showToast({ title: '无新增权限', icon: 'none' });
+      Taro.showToast({ title: '当前身份无新增权限', icon: 'none' });
       return false;
     }
+    const uid = get().currentUserId;
+    const member = get().familyMembers.find((m) => m.id === uid);
     const newRecord = { ...recordData, id: generateId(), createdAt: new Date().toISOString() };
+    const activityLog: ActivityLog = {
+      id: generateId(),
+      action: 'add',
+      target: 'growth',
+      targetId: newRecord.id,
+      summary: '录入成长数据（身高/体重/头围）',
+      userId: uid,
+      userName: member?.name,
+      createdAt: new Date().toISOString()
+    };
     set((state) => {
-      const next = { growthRecords: [...state.growthRecords, newRecord] };
+      const next = {
+        growthRecords: [...state.growthRecords, newRecord],
+        activityLogs: [activityLog, ...state.activityLogs].slice(0, 500)
+      };
       saveToStorage({ ...state, ...next });
       return next;
     });
@@ -334,12 +458,28 @@ export const useBabyStore = create<BabyStore>((set, get) => ({
 
   addReminder: (reminderData) => {
     if (!get().canCurrentUser('add')) {
-      Taro.showToast({ title: '无新增权限', icon: 'none' });
+      Taro.showToast({ title: '当前身份无新增权限', icon: 'none' });
       return false;
     }
+    const uid = get().currentUserId;
+    const member = get().familyMembers.find((m) => m.id === uid);
     const newReminder = { ...reminderData, id: generateId(), createdAt: new Date().toISOString() };
+    const activityLog: ActivityLog = {
+      id: generateId(),
+      action: 'add',
+      target: 'reminder',
+      targetId: newReminder.id,
+      targetType: newReminder.type,
+      summary: `新增提醒「${newReminder.title}」`,
+      userId: uid,
+      userName: member?.name,
+      createdAt: new Date().toISOString()
+    };
     set((state) => {
-      const next = { reminders: [...state.reminders, newReminder] };
+      const next = {
+        reminders: [...state.reminders, newReminder],
+        activityLogs: [activityLog, ...state.activityLogs].slice(0, 500)
+      };
       saveToStorage({ ...state, ...next });
       return next;
     });
@@ -348,11 +488,28 @@ export const useBabyStore = create<BabyStore>((set, get) => ({
 
   updateReminder: (id, updates) => {
     if (!get().canCurrentUser('edit')) {
-      Taro.showToast({ title: '无修改权限', icon: 'none' });
+      Taro.showToast({ title: '当前身份无修改权限', icon: 'none' });
       return false;
     }
+    const uid = get().currentUserId;
+    const member = get().familyMembers.find((m) => m.id === uid);
+    const original = get().reminders.find((r) => r.id === id);
+    const activityLog: ActivityLog = {
+      id: generateId(),
+      action: 'update',
+      target: 'reminder',
+      targetId: id,
+      targetType: original?.type,
+      summary: `修改提醒${original?.title ? '「' + original.title + '」' : ''}`,
+      userId: uid,
+      userName: member?.name,
+      createdAt: new Date().toISOString()
+    };
     set((state) => {
-      const next = { reminders: state.reminders.map((r) => (r.id === id ? { ...r, ...updates } : r)) };
+      const next = {
+        reminders: state.reminders.map((r) => (r.id === id ? { ...r, ...updates } : r)),
+        activityLogs: [activityLog, ...state.activityLogs].slice(0, 500)
+      };
       saveToStorage({ ...state, ...next });
       return next;
     });
@@ -360,19 +517,52 @@ export const useBabyStore = create<BabyStore>((set, get) => ({
   },
 
   toggleReminder: (id) => {
+    const uid = get().currentUserId;
+    const member = get().familyMembers.find((m) => m.id === uid);
+    const original = get().reminders.find((r) => r.id === id);
     set((state) => {
-      const next = { reminders: state.reminders.map((r) => (r.id === id ? { ...r, enabled: !r.enabled } : r)) };
+      const after = state.reminders.find((r) => r.id === id);
+      const activityLog: ActivityLog = {
+        id: generateId(),
+        action: 'toggle',
+        target: 'reminder',
+        targetId: id,
+        targetType: original?.type,
+        summary: `${after?.enabled ? '关闭' : '开启'}提醒「${original?.title || ''}」`,
+        userId: uid,
+        userName: member?.name,
+        createdAt: new Date().toISOString()
+      };
+      const next = {
+        reminders: state.reminders.map((r) => (r.id === id ? { ...r, enabled: !r.enabled } : r)),
+        activityLogs: [activityLog, ...state.activityLogs].slice(0, 500)
+      };
       saveToStorage({ ...state, ...next });
       return next;
     });
   },
 
   completeReminder: (id) => {
+    const uid = get().currentUserId;
+    const member = get().familyMembers.find((m) => m.id === uid);
+    const original = get().reminders.find((r) => r.id === id);
+    const activityLog: ActivityLog = {
+      id: generateId(),
+      action: 'complete',
+      target: 'reminder',
+      targetId: id,
+      targetType: original?.type,
+      summary: `标记提醒已完成「${original?.title || ''}」`,
+      userId: uid,
+      userName: member?.name,
+      createdAt: new Date().toISOString()
+    };
     set((state) => {
       const next = {
         reminders: state.reminders.map((r) =>
           r.id === id ? { ...r, completed: true, completedAt: new Date().toISOString() } : r
-        )
+        ),
+        activityLogs: [activityLog, ...state.activityLogs].slice(0, 500)
       };
       saveToStorage({ ...state, ...next });
       return next;
@@ -381,17 +571,52 @@ export const useBabyStore = create<BabyStore>((set, get) => ({
 
   addFamilyMember: (memberData) => {
     const newMember = { ...memberData, id: generateId() };
+    const uid = get().currentUserId;
+    const operator = get().familyMembers.find((m) => m.id === uid);
+    const activityLog: ActivityLog = {
+      id: generateId(),
+      action: 'add',
+      target: 'family',
+      targetId: newMember.id,
+      summary: `添加家庭成员「${newMember.name}」(${newMember.roleName}${newMember.canEdit ? '·可编辑' : '·只读'})`,
+      userId: uid,
+      userName: operator?.name,
+      createdAt: new Date().toISOString()
+    };
     set((state) => {
-      const next = { familyMembers: [...state.familyMembers, newMember] };
+      const next = {
+        familyMembers: [...state.familyMembers, newMember],
+        activityLogs: [activityLog, ...state.activityLogs].slice(0, 500)
+      };
       saveToStorage({ ...state, ...next });
       return next;
     });
   },
 
   updateFamilyMember: (id, updates) => {
+    const uid = get().currentUserId;
+    const operator = get().familyMembers.find((m) => m.id === uid);
+    const original = get().familyMembers.find((m) => m.id === id);
+    let summary = `修改「${original?.name || ''}」资料`;
+    if (updates.canEdit !== undefined && original && updates.canEdit !== original.canEdit) {
+      summary = updates.canEdit
+        ? `为「${original?.name}」开启编辑权限`
+        : `将「${original?.name}」改为仅查看`;
+    }
+    const activityLog: ActivityLog = {
+      id: generateId(),
+      action: 'change_permission',
+      target: updates.canEdit !== undefined ? 'permission' : 'family',
+      targetId: id,
+      summary,
+      userId: uid,
+      userName: operator?.name,
+      createdAt: new Date().toISOString()
+    };
     set((state) => {
       const next = {
-        familyMembers: state.familyMembers.map((m) => (m.id === id ? { ...m, ...updates } : m))
+        familyMembers: state.familyMembers.map((m) => (m.id === id ? { ...m, ...updates } : m)),
+        activityLogs: [activityLog, ...state.activityLogs].slice(0, 500)
       };
       saveToStorage({ ...state, ...next });
       return next;
@@ -399,8 +624,24 @@ export const useBabyStore = create<BabyStore>((set, get) => ({
   },
 
   removeFamilyMember: (id) => {
+    const uid = get().currentUserId;
+    const operator = get().familyMembers.find((m) => m.id === uid);
+    const original = get().familyMembers.find((m) => m.id === id);
+    const activityLog: ActivityLog = {
+      id: generateId(),
+      action: 'delete',
+      target: 'family',
+      targetId: id,
+      summary: `移除家庭成员「${original?.name || ''}」`,
+      userId: uid,
+      userName: operator?.name,
+      createdAt: new Date().toISOString()
+    };
     set((state) => {
-      const next = { familyMembers: state.familyMembers.filter((m) => m.id !== id) };
+      const next = {
+        familyMembers: state.familyMembers.filter((m) => m.id !== id),
+        activityLogs: [activityLog, ...state.activityLogs].slice(0, 500)
+      };
       saveToStorage({ ...state, ...next });
       return next;
     });
@@ -507,6 +748,12 @@ export const useBabyStore = create<BabyStore>((set, get) => ({
   getMemberById: (id) => get().familyMembers.find((m) => m.id === id),
 
   getCurrentBaby: () => get().babies.find((b) => b.id === get().currentBabyId),
+
+  getRecentActivity: (limit = 100) => {
+    return [...get().activityLogs]
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+      .slice(0, limit);
+  },
 
   resetAll: () => {
     set({ ...defaults });

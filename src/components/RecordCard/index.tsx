@@ -14,8 +14,11 @@ interface RecordCardProps {
 }
 
 const RecordCard: React.FC<RecordCardProps> = ({ record, onClick, compact }) => {
-  const getMemberById = useBabyStore((s) => s.getMemberById);
+  const { getMemberById, currentUserId } = useBabyStore();
   const member = getMemberById(record.createdBy);
+  const updater = record.updatedBy && record.updatedBy !== record.createdBy
+    ? getMemberById(record.updatedBy) : undefined;
+  const isCurrentUserCreated = record.createdBy === currentUserId;
   const typeColor = getRecordTypeColor(record.type);
   const typeLabel = getRecordTypeLabel(record.type);
   const photos = record.photos || [];
@@ -153,9 +156,16 @@ const RecordCard: React.FC<RecordCardProps> = ({ record, onClick, compact }) => 
           <Text className={styles.relativeTime}>{getRelativeTime(record.time)}</Text>
         </View>
         {member && (
-          <View className={styles.memberTag}>
-            {member.name}
-          </View>
+          <>
+            <View className={styles.memberTag}>
+              👤{member.name}{isCurrentUserCreated && !updater ? '（我）' : ''}
+            </View>
+            {updater && (
+              <View className={styles.updaterTag}>
+                ✏️{updater.name}
+              </View>
+            )}
+          </>
         )}
       </View>
       {renderDetail()}

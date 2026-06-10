@@ -4,7 +4,8 @@ import Taro from '@tarojs/taro';
 import classnames from 'classnames';
 import styles from './index.module.scss';
 import { useBabyStore } from '@/store';
-import type { FamilyMember } from '@/types';
+import type { FamilyMember, ActivityLog } from '@/types';
+import { dayjs, getRelativeTime } from '@/utils';
 
 const roleOptions = [
   { key: 'mom' as const, label: '妈妈', emoji: '👩' },
@@ -17,18 +18,23 @@ const roleOptions = [
 ];
 
 const FamilyPage: React.FC = () => {
-  const familyMembers = useBabyStore((s) => s.familyMembers);
-  const currentUserId = useBabyStore((s) => s.currentUserId);
-  const addFamilyMember = useBabyStore((s) => s.addFamilyMember);
-  const updateFamilyMember = useBabyStore((s) => s.updateFamilyMember);
-  const removeFamilyMember = useBabyStore((s) => s.removeFamilyMember);
-  const generateInviteCode = useBabyStore((s) => s.generateInviteCode);
-  const acceptInviteCode = useBabyStore((s) => s.acceptInviteCode);
-  const inviteCode = useBabyStore((s) => s.inviteCode);
-  const canEdit = useBabyStore((s) => s.canEdit);
+  const {
+    familyMembers,
+    currentUserId,
+    addFamilyMember,
+    updateFamilyMember,
+    removeFamilyMember,
+    generateInviteCode,
+    acceptInviteCode,
+    inviteCode,
+    canEdit,
+    setCurrentUser,
+    getRecentActivity
+  } = useBabyStore();
 
   const [showAddModal, setShowAddModal] = useState(false);
   const [showJoinModal, setShowJoinModal] = useState(false);
+  const [showUserSwitcher, setShowUserSwitcher] = useState(false);
   const [newName, setNewName] = useState('');
   const [newRole, setNewRole] = useState<FamilyMember['role']>('mom');
   const [newRoleName, setNewRoleName] = useState('妈妈');
@@ -166,6 +172,39 @@ const FamilyPage: React.FC = () => {
             <Text className={styles.featureLabel}>分工统计</Text>
           </View>
         </View>
+      </View>
+
+      <View className={styles.card} style={{ background: 'linear-gradient(135deg, #FFE4EC 0%, #FFF3E0 100%)' }}>
+        <View className={styles.sectionTitle}>
+          <Text style={{ marginRight: 8 }}>🪪</Text>当前使用身份
+        </View>
+        {(() => {
+          const me = familyMembers.find(m => m.id === currentUserId);
+          if (!me) return null;
+          return (
+            <View style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12rpx 0' }}>
+              <View style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
+                <Text style={{ fontSize: 64, background: '#fff', padding: '12rpx 24rpx', borderRadius: '50%', boxShadow: '0 4rpx 12rpx rgba(0,0,0,0.08)' }}>
+                  {({mom:'👩', dad:'👨', nanny:'👩‍🍳', grandma:'👵', grandpa:'👴', other:'🧑'} as any)[me.role] || '🧑'}
+                </Text>
+                <View>
+                  <View style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <Text style={{ fontSize: 32, fontWeight: 700, color: '#333' }}>{me.name}</Text>
+                    <View style={{
+                      padding: '4rpx 16rpx', borderRadius: 20, fontSize: 22,
+                      background: me.canEdit ? 'rgba(77, 170, 87, 0.1)' : 'rgba(144, 147, 153, 0.12)',
+                      color: me.canEdit ? '#4DAA57' : '#909399'
+                    }}>{me.canEdit ? '可编辑' : '仅查看'}</View>
+                  </View>
+                  <Text style={{ fontSize: 24, color: '#666', marginTop: 6, display: 'block' }}>{me.roleName} · 现在正以此身份操作</Text>
+                </View>
+              </View>
+              <View className={styles.editBtn} style={{ padding: '12rpx 24rpx', fontSize: 26 }} onClick={() => setShowUserSwitcher(true)}>
+                切换身份
+              </View>
+            </View>
+          );
+        })()}
       </View>
 
       <View className={styles.card}>
@@ -365,6 +404,48 @@ const FamilyPage: React.FC = () => {
         </View>
       )}
 
+      {showUserSwitcher && (
+        <View className={styles.modalMask} onClick={() => setShowUserSwitcher(false)}>
+          <View className={styles.modalContent} onClick={(e) => e.stopPropagation()}>
+            <View className={styles.modalTitle}>切换使用身份</View>
+            <Text style={{ fontSize: 24, color: '#999', display: 'block', marginBottom: 20 }}>
+              模拟不同家人登录，可验证不同权限下的编辑能力
+            </Text>
+            {familyMembers.map(m => (
+              <View key={m.id}
+                onClick={() => { setCurrentUser(m.id); setShowUserSwitcher(false); }}
+                style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                  padding: '24rpx', borderRadius: 16, marginBottom: 16,
+                  border: m.id === currentUserId ? '2rpx solid #FF8BA7' : '2rpx solid transparent',
+                  background: m.id === currentUserId ? '#FFF5F7' : '#FAFAFA'
+                }}>
+                <View style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+                  <Text style={{ fontSize: 44 }}>
+                    {({mom:'👩', dad:'👨', nanny:'👩‍🍳', grandma:'👵', grandpa:'👴', other:'🧑'} as any)[m.role] || '🧑'}
+                  </Text>
+                  <View>
+                    <Text style={{ fontSize: 30, fontWeight: 600 }}>{m.name}</Text>
+                    <Text style={{ fontSize: 24, color: '#999', marginLeft: 12 }}>{m.roleName}</Text>
+                  </View>
+                </View>
+                <View style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <Text style={{
+                    padding: '4rpx 14rpx', borderRadius: 12, fontSize: 22,
+                    background: m.canEdit ? 'rgba(77,170,87,0.1)' : 'rgba(144,147,153,0.12)',
+                    color: m.canEdit ? '#4DAA57' : '#909399'
+                  }}>{m.canEdit ? '可编辑' : '仅查看'}</Text>
+                  {m.id === currentUserId && <Text style={{ color: '#FF5A7E', fontSize: 24, fontWeight: 600 }}>✓ 当前</Text>}
+                </View>
+              </View>
+            ))}
+            <View className={styles.modalActions}>
+              <View className={styles.cancelBtn} onClick={() => setShowUserSwitcher(false)}>关闭</View>
+            </View>
+          </View>
+        </View>
+      )}
+
       {showJoinModal && (
         <View className={styles.modalMask} onClick={() => setShowJoinModal(false)}>
           <View className={styles.modalContent} onClick={(e) => e.stopPropagation()}>
@@ -402,6 +483,66 @@ const FamilyPage: React.FC = () => {
           </View>
         </View>
       )}
+
+      <View className={styles.card}>
+        <View className={styles.sectionTitle}>
+          <Text style={{ marginRight: 8 }}>📋</Text>家人协作时间线
+          <Text style={{ fontSize: 22, color: '#999', fontWeight: 400, marginLeft: 12 }}>最近 {Math.min(getRecentActivity(50).length, 50)} 条操作记录，月嫂交接核对用</Text>
+        </View>
+        {(() => {
+          const logs = getRecentActivity(50);
+          if (logs.length === 0) return <Text style={{ color: '#999', fontSize: 24 }}>暂无操作记录</Text>;
+          const actionMap: Record<string, { label: string; color: string; bg: string; icon: string }> = {
+            add: { label: '新增', color: '#4DAA57', bg: 'rgba(77,170,87,0.1)', icon: '+' },
+            update: { label: '修改', color: '#2A7DC9', bg: 'rgba(42,125,201,0.1)', icon: '✎' },
+            delete: { label: '删除', color: '#FF4D4F', bg: 'rgba(255,77,79,0.1)', icon: '×' },
+            complete: { label: '完成', color: '#4DAA57', bg: 'rgba(77,170,87,0.1)', icon: '✓' },
+            toggle: { label: '开关', color: '#FA8C16', bg: 'rgba(250,140,22,0.1)', icon: '⚙' },
+            switch_user: { label: '切换', color: '#7D6DE7', bg: 'rgba(125,109,231,0.1)', icon: '↔' },
+            change_permission: { label: '权限', color: '#7D6DE7', bg: 'rgba(125,109,231,0.1)', icon: '🔑' },
+            join_family: { label: '加入', color: '#FF5A7E', bg: 'rgba(255,90,126,0.1)', icon: '👨‍👩‍👧' }
+          };
+          const typeMap: Record<string, string> = { breast: '母乳', formula: '配方奶', bottle: '瓶喂', food: '辅食', diaper: '尿布', sleep: '睡眠' };
+          const targetMap: Record<string, string> = { record: '记录', growth: '成长', reminder: '提醒', family: '成员', permission: '权限' };
+          let lastDate = '';
+          return logs.map((log, idx) => {
+            const date = dayjs(log.createdAt).format('YYYY-MM-DD');
+            const showDateLabel = date !== lastDate;
+            lastDate = date;
+            const act = actionMap[log.action] || actionMap.add;
+            return (
+              <View key={log.id}>
+                {showDateLabel && idx > 0 && <View style={{ height: 1, background: '#F0E8EB', margin: '16rpx 0' }} />}
+                {showDateLabel && (
+                  <Text style={{ fontSize: 22, color: '#999', fontWeight: 600, display: 'block', margin: '8rpx 0 12rpx' }}>
+                    {date}
+                  </Text>
+                )}
+                <View style={{ display: 'flex', alignItems: 'flex-start', gap: 16, padding: '12rpx 0' }}>
+                  <View style={{
+                    width: 44, height: 44, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    background: act.bg, color: act.color, fontSize: 26, fontWeight: 700, marginTop: 2, flexShrink: 0
+                  }}>{act.icon}</View>
+                  <View style={{ flex: 1, minWidth: 0 }}>
+                    <View style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
+                      <Text style={{
+                        padding: '2rpx 14rpx', borderRadius: 10, fontSize: 20,
+                        background: act.bg, color: act.color, fontWeight: 600
+                      }}>{act.label}{log.targetType ? `·${typeMap[log.targetType] || targetMap[log.target] || ''}` : `·${targetMap[log.target] || ''}`}</Text>
+                      <Text style={{ fontSize: 26, color: '#333', flex: 1 }}>{log.summary}</Text>
+                    </View>
+                    <View style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 6 }}>
+                      <Text style={{ fontSize: 22, color: '#FF8BA7', fontWeight: 600 }}>{log.userName || '未知'}</Text>
+                      <Text style={{ fontSize: 22, color: '#BBB' }}>·</Text>
+                      <Text style={{ fontSize: 22, color: '#999' }}>{dayjs(log.createdAt).format('HH:mm')}（{getRelativeTime(log.createdAt)}）</Text>
+                    </View>
+                  </View>
+                </View>
+              </View>
+            );
+          });
+        })()}
+      </View>
 
       <View className={styles.bottomBar}>
         <View className={styles.shareBtn} onClick={handleShare}>
