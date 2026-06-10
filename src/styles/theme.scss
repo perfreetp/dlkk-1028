@@ -1,0 +1,41 @@
+// ============================================
+// 母婴喂养记录 App - 主题配色变量
+// ============================================
+
+// 品牌主题色：温馨粉色系
+$color-primary: #FF8BA7;
+$color-primary-light: #FFB6C7;
+$color-primary-dark: #F06292;
+$color-primary-gradient: linear-gradient(135deg, #FF8BA7 0%, #FFB6C7 100%);
+
+// 业务功能色
+$color-breast: #FFD93D;      // 母乳-金黄
+$color-formula: #F7B267;     // 配方奶-暖橙
+$color-food: #A8D8EA;        // 辅食-婴儿蓝
+$color-diaper: #B5EAD7;      // 尿布-薄荷绿
+$color-sleep: #C3AED6;       // 睡眠-梦幻紫
+$color-growth: #98D8C8;      // 成长-青绿
+
+// 语义色
+$color-success: #52C41A;
+$color-warning: #FAAD14;
+$color-error: #FF4D4F;
+$color-info: #1890FF;
+
+// 背景色
+$color-bg-page: #FFF5F7;
+$color-bg-page-gradient: linear-gradient(180deg, #FFF0F3 0%, #FFF5F7 30%, #FFF5F7 100%);
+$color-bg-card: #FFFFFF;
+$color-bg-hover: #FFF0F3;
+$color-bg-tag: #FFE8ED;
+
+// 文本色
+$color-text-primary: #2D2D2D;
+$color-text-secondary: #666666;
+$color-text-tertiary: #999999;
+$color-text-disabled: #CCCCCC;
+$color-text-white: #FFFFFF;
+
+// 边框色
+$color-border: #F0E4E8;
+$color-divider: #F7F0F2;

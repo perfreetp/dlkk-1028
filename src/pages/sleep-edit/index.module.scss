@@ -1,0 +1,268 @@
+@use '@/styles/variables.scss' as *;
+
+.page {
+  min-height: 100vh;
+  padding: $spacing-lg $spacing-lg 160rpx;
+  background: $color-bg-page;
+}
+
+.card {
+  background: $color-bg-card;
+  border-radius: $radius-lg;
+  padding: $spacing-lg;
+  margin-bottom: $spacing-md;
+  box-shadow: $shadow-card;
+}
+
+.sectionTitle {
+  font-size: $font-size-md;
+  font-weight: $font-weight-semibold;
+  color: $color-text-primary;
+  margin-bottom: $spacing-md;
+}
+
+.quickActionRow {
+  display: flex;
+  gap: $spacing-md;
+  margin-bottom: $spacing-lg;
+}
+
+.quickBtn {
+  @include button-reset;
+  flex: 1;
+  padding: $spacing-lg $spacing-md;
+  background: linear-gradient(135deg, $color-sleep 0%, lighten($color-sleep, 15%) 100%);
+  border-radius: $radius-lg;
+  flex-direction: column;
+  gap: $spacing-xs;
+  color: $color-text-white;
+  box-shadow: 0 4rpx 16rpx rgba($color-sleep, 0.3);
+
+  &.end {
+    background: linear-gradient(135deg, $color-warning 0%, lighten($color-warning, 10%) 100%);
+    box-shadow: 0 4rpx 16rpx rgba($color-warning, 0.3);
+  }
+}
+
+.quickEmoji {
+  font-size: 48rpx;
+}
+
+.quickLabel {
+  font-size: $font-size-sm;
+  font-weight: $font-weight-semibold;
+}
+
+.timeRow {
+  display: flex;
+  gap: $spacing-md;
+  margin-bottom: $spacing-md;
+}
+
+.timeField {
+  flex: 1;
+}
+
+.timeLabel {
+  font-size: $font-size-sm;
+  color: $color-text-secondary;
+  margin-bottom: $spacing-xs;
+}
+
+.timeValue {
+  padding: $spacing-md;
+  background: $color-bg-hover;
+  border-radius: $radius-md;
+  font-size: $font-size-md;
+  font-weight: $font-weight-semibold;
+  color: $color-text-primary;
+  text-align: center;
+}
+
+.durationCard {
+  background: linear-gradient(135deg, rgba($color-sleep, 0.1) 0%, rgba($color-sleep, 0.05) 100%);
+  border: 2rpx solid rgba($color-sleep, 0.2);
+  border-radius: $radius-lg;
+  padding: $spacing-lg;
+  text-align: center;
+}
+
+.durationValue {
+  font-size: 72rpx;
+  font-weight: $font-weight-bold;
+  color: $color-sleep;
+  line-height: 1.2;
+}
+
+.durationUnit {
+  font-size: $font-size-md;
+  color: $color-text-secondary;
+  margin-left: $spacing-xs;
+}
+
+.durationHint {
+  font-size: $font-size-sm;
+  color: $color-text-tertiary;
+  margin-top: $spacing-xs;
+}
+
+.stepperRow {
+  display: flex;
+  align-items: center;
+  gap: $spacing-md;
+  margin-bottom: $spacing-md;
+
+  &:last-child {
+    margin-bottom: 0;
+  }
+}
+
+.stepperLabel {
+  flex: 1;
+  font-size: $font-size-md;
+  color: $color-text-primary;
+}
+
+.stepper {
+  display: flex;
+  align-items: center;
+  gap: $spacing-md;
+}
+
+.stepBtn {
+  @include button-reset;
+  width: 64rpx;
+  height: 64rpx;
+  border-radius: $radius-round;
+  background: $color-bg-hover;
+  font-size: $font-size-xl;
+  color: $color-text-secondary;
+
+  &:active {
+    background: $color-sleep;
+    color: $color-text-white;
+  }
+}
+
+.stepValue {
+  min-width: 120rpx;
+  text-align: center;
+  font-size: $font-size-xl;
+  font-weight: $font-weight-bold;
+  color: $color-sleep;
+
+  .unit {
+    font-size: $font-size-sm;
+    font-weight: $font-weight-normal;
+    color: $color-text-secondary;
+    margin-left: 4rpx;
+  }
+}
+
+.qualityGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: $spacing-md;
+}
+
+.qualityOption {
+  @include button-reset;
+  padding: $spacing-lg $spacing-sm;
+  background: $color-bg-hover;
+  border-radius: $radius-lg;
+  flex-direction: column;
+  gap: $spacing-xs;
+  border: 4rpx solid transparent;
+
+  &.selected {
+    background: rgba($color-sleep, 0.1);
+    border-color: $color-sleep;
+  }
+}
+
+.qualityEmoji {
+  font-size: 48rpx;
+}
+
+.qualityLabel {
+  font-size: $font-size-sm;
+  font-weight: $font-weight-medium;
+  color: $color-text-primary;
+}
+
+.qualityDesc {
+  font-size: $font-size-xs;
+  color: $color-text-tertiary;
+}
+
+.envTags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: $spacing-sm;
+  margin-bottom: $spacing-md;
+}
+
+.envTag {
+  @include button-reset;
+  padding: $spacing-xs $spacing-md;
+  background: $color-bg-hover;
+  border-radius: $radius-button;
+  font-size: $font-size-sm;
+  color: $color-text-secondary;
+  border: 2rpx solid transparent;
+
+  &.active {
+    background: rgba($color-primary, 0.1);
+    border-color: $color-primary;
+    color: $color-primary;
+    font-weight: $font-weight-medium;
+  }
+}
+
+.textarea {
+  width: 100%;
+  min-height: 160rpx;
+  padding: $spacing-md;
+  background: $color-bg-hover;
+  border-radius: $radius-md;
+  font-size: $font-size-md;
+  color: $color-text-primary;
+  box-sizing: border-box;
+}
+
+.bottomBar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: $color-bg-card;
+  padding: $spacing-md $spacing-lg;
+  padding-bottom: calc(#{$spacing-lg} + env(safe-area-inset-bottom));
+  display: flex;
+  gap: $spacing-md;
+  box-shadow: 0 -4rpx 16rpx rgba(0,0,0,0.06);
+  z-index: 100;
+}
+
+.cancelBtn {
+  @include button-reset;
+  flex: 1;
+  height: $button-height-lg;
+  border-radius: $radius-button;
+  background: $color-bg-hover;
+  font-size: $font-size-md;
+  color: $color-text-secondary;
+  font-weight: $font-weight-semibold;
+}
+
+.saveBtn {
+  @include button-reset;
+  flex: 2;
+  height: $button-height-lg;
+  border-radius: $radius-button;
+  background: $color-primary-gradient;
+  font-size: $font-size-md;
+  color: $color-text-white;
+  font-weight: $font-weight-semibold;
+  box-shadow: 0 4rpx 16rpx rgba(255, 139, 167, 0.3);
+}

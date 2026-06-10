@@ -1,0 +1,249 @@
+@use '@/styles/variables.scss' as *;
+
+.page {
+  min-height: 100vh;
+  padding: $spacing-lg $spacing-lg 160rpx;
+  background: $color-bg-page;
+}
+
+.card {
+  background: $color-bg-card;
+  border-radius: $radius-lg;
+  padding: $spacing-lg;
+  margin-bottom: $spacing-md;
+  box-shadow: $shadow-card;
+}
+
+.sectionTitle {
+  font-size: $font-size-md;
+  font-weight: $font-weight-semibold;
+  color: $color-text-primary;
+  margin-bottom: $spacing-md;
+}
+
+.dateRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: $spacing-md;
+  background: linear-gradient(135deg, rgba($color-primary, 0.1) 0%, rgba($color-primary, 0.05) 100%);
+  border-radius: $radius-md;
+  margin-bottom: $spacing-lg;
+}
+
+.dateLabel {
+  font-size: $font-size-sm;
+  color: $color-text-secondary;
+}
+
+.dateValue {
+  font-size: $font-size-lg;
+  font-weight: $font-weight-bold;
+  color: $color-primary;
+}
+
+.measureGrid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: $spacing-lg;
+}
+
+.measureItem {
+  position: relative;
+}
+
+.measureHeader {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  margin-bottom: $spacing-md;
+}
+
+.measureIcon {
+  width: 56rpx;
+  height: 56rpx;
+  border-radius: $radius-round;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28rpx;
+}
+
+.measureName {
+  font-size: $font-size-md;
+  font-weight: $font-weight-semibold;
+  color: $color-text-primary;
+  flex: 1;
+}
+
+.measureHint {
+  font-size: $font-size-xs;
+  color: $color-text-tertiary;
+}
+
+.measureInputRow {
+  display: flex;
+  align-items: center;
+  gap: $spacing-md;
+  padding: $spacing-md;
+  background: $color-bg-hover;
+  border-radius: $radius-lg;
+  border: 2rpx solid transparent;
+
+  &:focus-within {
+    border-color: $color-primary;
+    background: rgba($color-primary, 0.05);
+  }
+}
+
+.stepper {
+  display: flex;
+  align-items: center;
+  gap: $spacing-md;
+}
+
+.stepBtn {
+  @include button-reset;
+  width: 72rpx;
+  height: 72rpx;
+  border-radius: $radius-round;
+  background: $color-bg-card;
+  font-size: $font-size-xl;
+  color: $color-text-secondary;
+  box-shadow: 0 2rpx 8rpx rgba(0,0,0,0.06);
+
+  &:active {
+    background: $color-primary;
+    color: $color-text-white;
+  }
+}
+
+.inputWrap {
+  flex: 1;
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+}
+
+.measureValue {
+  width: 180rpx;
+  font-size: 56rpx;
+  font-weight: $font-weight-bold;
+  color: $color-text-primary;
+  text-align: center;
+  background: transparent;
+  padding: 0;
+}
+
+.measureUnit {
+  font-size: $font-size-md;
+  color: $color-text-tertiary;
+  font-weight: $font-weight-medium;
+  margin-left: $spacing-xs;
+}
+
+.lastRecord {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: $spacing-sm;
+  padding: 0 $spacing-xs;
+}
+
+.lastLabel {
+  font-size: $font-size-xs;
+  color: $color-text-tertiary;
+}
+
+.lastValue {
+  font-size: $font-size-xs;
+  color: $color-text-secondary;
+  font-weight: $font-weight-medium;
+
+  .up {
+    color: $color-success;
+  }
+
+  .down {
+    color: $color-error;
+  }
+}
+
+.bmiCard {
+  background: linear-gradient(135deg, rgba(107, 203, 119, 0.1) 0%, rgba(107, 203, 119, 0.05) 100%);
+  border-radius: $radius-lg;
+  padding: $spacing-lg;
+  text-align: center;
+  border: 2rpx solid rgba($color-success, 0.2);
+}
+
+.bmiLabel {
+  font-size: $font-size-sm;
+  color: $color-text-secondary;
+  margin-bottom: $spacing-xs;
+}
+
+.bmiValue {
+  font-size: 56rpx;
+  font-weight: $font-weight-bold;
+  color: $color-success;
+  margin-bottom: $spacing-xs;
+}
+
+.bmiStatus {
+  display: inline-block;
+  padding: $spacing-xs $spacing-md;
+  background: rgba($color-success, 0.2);
+  color: $color-success;
+  border-radius: $radius-button;
+  font-size: $font-size-sm;
+  font-weight: $font-weight-medium;
+}
+
+.textarea {
+  width: 100%;
+  min-height: 160rpx;
+  padding: $spacing-md;
+  background: $color-bg-hover;
+  border-radius: $radius-md;
+  font-size: $font-size-md;
+  color: $color-text-primary;
+  box-sizing: border-box;
+}
+
+.bottomBar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: $color-bg-card;
+  padding: $spacing-md $spacing-lg;
+  padding-bottom: calc(#{$spacing-lg} + env(safe-area-inset-bottom));
+  display: flex;
+  gap: $spacing-md;
+  box-shadow: 0 -4rpx 16rpx rgba(0,0,0,0.06);
+  z-index: 100;
+}
+
+.cancelBtn {
+  @include button-reset;
+  flex: 1;
+  height: $button-height-lg;
+  border-radius: $radius-button;
+  background: $color-bg-hover;
+  font-size: $font-size-md;
+  color: $color-text-secondary;
+  font-weight: $font-weight-semibold;
+}
+
+.saveBtn {
+  @include button-reset;
+  flex: 2;
+  height: $button-height-lg;
+  border-radius: $radius-button;
+  background: $color-primary-gradient;
+  font-size: $font-size-md;
+  color: $color-text-white;
+  font-weight: $font-weight-semibold;
+  box-shadow: 0 4rpx 16rpx rgba(255, 139, 167, 0.3);
+}

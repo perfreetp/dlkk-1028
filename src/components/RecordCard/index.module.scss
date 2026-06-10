@@ -1,0 +1,100 @@
+@use '@/styles/variables.scss' as *;
+
+.card {
+  background: $color-bg-card;
+  border-radius: $radius-lg;
+  padding: $spacing-lg;
+  box-shadow: $shadow-card;
+  margin-bottom: $spacing-md;
+
+  &:active {
+    transform: scale(0.99);
+    opacity: 0.95;
+  }
+
+  &.compact {
+    padding: $spacing-md;
+  }
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  margin-bottom: $spacing-md;
+}
+
+.typeTag {
+  font-size: $font-size-sm;
+  font-weight: $font-weight-medium;
+  padding: 4rpx 16rpx;
+  border-radius: $radius-round;
+  margin-right: $spacing-sm;
+}
+
+.timeInfo {
+  flex: 1;
+  display: flex;
+  align-items: baseline;
+  gap: $spacing-sm;
+}
+
+.time {
+  font-size: $font-size-lg;
+  font-weight: $font-weight-semibold;
+  color: $color-text-primary;
+}
+
+.relativeTime {
+  font-size: $font-size-xs;
+  color: $color-text-tertiary;
+}
+
+.memberTag {
+  font-size: $font-size-xs;
+  color: $color-text-secondary;
+  background: $color-bg-tag;
+  padding: 4rpx 12rpx;
+  border-radius: $radius-round;
+}
+
+.detailRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: $spacing-lg;
+}
+
+.detailItem {
+  display: flex;
+  flex-direction: column;
+  gap: 4rpx;
+}
+
+.detailLabel {
+  font-size: $font-size-xs;
+  color: $color-text-tertiary;
+}
+
+.detailValue {
+  font-size: $font-size-md;
+  font-weight: $font-weight-medium;
+  color: $color-text-primary;
+}
+
+.note {
+  margin-top: $spacing-md;
+  padding-top: $spacing-md;
+  border-top: 1rpx solid $color-divider;
+  display: flex;
+}
+
+.noteLabel {
+  font-size: $font-size-sm;
+  color: $color-text-tertiary;
+  flex-shrink: 0;
+}
+
+.noteText {
+  font-size: $font-size-sm;
+  color: $color-text-secondary;
+  flex: 1;
+}
