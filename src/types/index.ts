@@ -21,13 +21,29 @@ export interface Baby {
   headCircumference?: number;
 }
 
+export type PermissionLevel = 'viewer' | 'editor' | 'admin';
+
+export const PERMISSION_LABELS: Record<PermissionLevel, string> = {
+  viewer: '仅查看',
+  editor: '可记录',
+  admin: '管理员'
+};
+
+export const PERMISSION_DESCS: Record<PermissionLevel, string> = {
+  viewer: '仅查看记录和报告，无法新增或修改',
+  editor: '可新增/编辑/删除自己的记录、提醒、成长数据',
+  admin: '可管理家庭成员及权限、操作所有记录'
+};
+
 export interface FamilyMember {
   id: string;
   name: string;
   avatar?: string;
   role: 'mom' | 'dad' | 'grandma' | 'grandpa' | 'nanny' | 'other';
   roleName: string;
-  canEdit: boolean;
+  /** @deprecated 用 permissionLevel 替代 */
+  canEdit?: boolean;
+  permissionLevel: PermissionLevel;
 }
 
 export interface BaseRecord {
