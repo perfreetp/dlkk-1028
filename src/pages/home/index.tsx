@@ -22,11 +22,13 @@ const HomePage: React.FC = () => {
   const getCurrentBaby = useBabyStore((s) => s.getCurrentBaby);
   const getRecordsByDate = useBabyStore((s) => s.getRecordsByDate);
   const getDailyStats = useBabyStore((s) => s.getDailyStats);
+  const getPeriodSummary = useBabyStore((s) => s.getPeriodSummary);
+  const getRecordsByDateRange = useBabyStore((s) => s.getRecordsByDateRange);
   const undoRecord = useBabyStore((s) => s.undoRecord);
   const redoRecord = useBabyStore((s) => s.redoRecord);
   const historyStack = useBabyStore((s) => s.historyStack);
 
-  const [dateTab, setDateTab] = useState<'today' | 'yesterday' | 'week'>('today');
+  const [dateTab, setDateTab] = useState<'today' | 'yesterday' | 'week' | 'month'>('today');
   const [showUndo, setShowUndo] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -40,8 +42,23 @@ const HomePage: React.FC = () => {
     return dayjs().format('YYYY-MM-DD');
   }, [dateTab]);
 
-  const records = useMemo(() => getRecordsByDate(targetDate), [targetDate, getRecordsByDate]);
-  const stats = useMemo(() => getDailyStats(targetDate), [targetDate, getDailyStats]);
+  const currentSummary = useMemo(() => {
+    if (dateTab === 'today' || dateTab === 'yesterday') {
+      const s = getDailyStats(targetDate);
+      return { ...s, startDate: targetDate, endDate: targetDate, dayCount: 1 };
+    }
+    if (dateTab === 'week') {
+      return getPeriodSummary('week');
+    }
+    return getPeriodSummary('month');
+  }, [dateTab, targetDate, getDailyStats, getPeriodSummary]);
+
+  const currentRecords = useMemo(() => {
+    if (dateTab === 'today' || dateTab === 'yesterday') {
+      return getRecordsByDate(targetDate);
+    }
+    return getRecordsByDateRange(currentSummary.startDate, currentSummary.endDate);
+  }, [dateTab, targetDate, currentSummary, getRecordsByDate, getRecordsByDateRange]);
 
   const handleQuickAction = (key: string) => {
     const pageMap: Record<string, string> = {
@@ -187,7 +204,16 @@ const HomePage: React.FC = () => {
       <View className={styles.statsSection}>
         <View className={styles.statsCard}>
           <View className={styles.statsHeader}>
-            <Text className={styles.sectionTitle} style={{ marginBottom: 0 }}>今日统计</Text>
+            <View>
+              <Text className={styles.sectionTitle} style={{ marginBottom: 0 }}>
+                {dateTab === 'today' ? '今日统计' : dateTab === 'yesterday' ? '昨日统计' : dateTab === 'week' ? '本周汇总' : '本月汇总'}
+              </Text>
+              {currentSummary.startDate !== currentSummary.endDate && (
+                <Text style={{ fontSize: 12, color: '#999', marginTop: 4, display: 'block' }}>
+                  {currentSummary.startDate} ~ {currentSummary.endDate}
+                </Text>
+              )}
+            </View>
             <View className={styles.dateTab}>
               <View
                 className={classnames(styles.dateTabItem, dateTab === 'today' && styles.active)}
@@ -201,6 +227,10 @@ const HomePage: React.FC = () => {
                 className={classnames(styles.dateTabItem, dateTab === 'week' && styles.active)}
                 onClick={() => setDateTab('week')}
               >本周</View>
+              <View
+                className={classnames(styles.dateTabItem, dateTab === 'month' && styles.active)}
+                onClick={() => setDateTab('month')}
+              >本月</View>
             </View>
           </View>
           <View className={styles.statsGrid}>
@@ -210,12 +240,12 @@ const HomePage: React.FC = () => {
                 <Text className={styles.statLabel}>喂奶</Text>
               </View>
               <View>
-                <Text className={styles.statValue}>{stats.feedingCount}</Text>
+                <Text className={styles.statValue}>{currentSummary.feedingCount}</Text>
                 <Text className={styles.statUnit}> 次</Text>
               </View>
               <Text className={styles.statSub}>
-                {stats.feedingTotalAmount > 0 ? `${stats.feedingTotalAmount}ml` : ''}
-                {stats.breastTotalDuration > 0 ? ` 亲喂${formatDuration(stats.breastTotalDuration)}` : ''}
+                {currentSummary.feedingTotalAmount > 0 ? `${currentSummary.feedingTotalAmount}ml` : ''}
+                {currentSummary.breastTotalDuration > 0 ? ` 亲喂${formatDuration(currentSummary.breastTotalDuration)}` : ''}
               </Text>
             </View>
             <View className={styles.statBox}>
@@ -224,7 +254,7 @@ const HomePage: React.FC = () => {
                 <Text className={styles.statLabel}>辅食</Text>
               </View>
               <View>
-                <Text className={styles.statValue}>{stats.foodCount}</Text>
+                <Text className={styles.statValue}>{currentSummary.foodCount}</Text>
                 <Text className={styles.statUnit}> 次</Text>
               </View>
               <Text className={styles.statSub}>营养均衡，健康成长</Text>
@@ -235,7 +265,7 @@ const HomePage: React.FC = () => {
                 <Text className={styles.statLabel}>换尿布</Text>
               </View>
               <View>
-                <Text className={styles.statValue}>{stats.diaperCount}</Text>
+                <Text className={styles.statValue}>{currentSummary.diaperCount}</Text>
                 <Text className={styles.statUnit}> 次</Text>
               </View>
               <Text className={styles.statSub}>观察颜色和形态</Text>
@@ -246,9 +276,9 @@ const HomePage: React.FC = () => {
                 <Text className={styles.statLabel}>睡眠</Text>
               </View>
               <View>
-                <Text className={styles.statValue}>{formatDuration(stats.sleepTotalDuration)}</Text>
+                <Text className={styles.statValue}>{`${Math.floor(currentSummary.sleepTotalDuration / 60)}h${currentSummary.sleepTotalDuration % 60}m`}</Text>
               </View>
-              <Text className={styles.statSub}>共{stats.sleepCount}次小睡</Text>
+              <Text className={styles.statSub}>共{currentSummary.sleepCount}次小睡</Text>
             </View>
           </View>
         </View>
@@ -256,17 +286,19 @@ const HomePage: React.FC = () => {
 
       <View className={styles.timelineSection}>
         <View className={styles.timelineHeader}>
-          <Text className={styles.timelineTitle}>今日时间轴</Text>
+          <Text className={styles.timelineTitle}>
+            {dateTab === 'today' ? '今日记录' : dateTab === 'yesterday' ? '昨日记录' : dateTab === 'week' ? `本周记录（共${currentSummary.dayCount}天）` : `本月记录（共${currentSummary.dayCount}天）`}
+          </Text>
           <Text className={classnames(styles.sectionTitle, styles.action)} style={{ marginBottom: 0 }} onClick={() => Taro.switchTab({ url: '/pages/record/index' })}>查看全部</Text>
         </View>
-        {records.length === 0 ? (
+        {currentRecords.length === 0 ? (
           <View className={styles.emptyState}>
             <Text className={styles.emptyIcon}>📋</Text>
-            <Text className={styles.emptyText}>今天还没有记录，点击上方快捷按钮开始记录吧~</Text>
+            <Text className={styles.emptyText}>该范围内还没有记录，点击上方快捷按钮开始记录吧~</Text>
           </View>
         ) : (
           <View className={styles.recordList}>
-            {records.map((record) => (
+            {currentRecords.map((record) => (
               <View key={record.id} className={styles.recordListItem}>
                 <RecordCard record={record} compact />
               </View>

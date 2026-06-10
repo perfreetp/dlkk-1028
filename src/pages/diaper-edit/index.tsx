@@ -6,6 +6,7 @@ import styles from './index.module.scss';
 import { useBabyStore } from '@/store';
 import { dayjs } from '@/utils';
 import type { DiaperType, DiaperColor, DiaperTexture } from '@/types';
+import ImagePicker from '@/components/ImagePicker';
 
 const typeOptions = [
   { key: 'pee' as DiaperType, label: '小便', emoji: '💧' },
@@ -66,15 +67,6 @@ const DiaperEditPage: React.FC = () => {
       console.error('[DiaperEdit] 保存失败:', e);
       Taro.showToast({ title: '保存失败', icon: 'error' });
     }
-  };
-
-  const handleAddPhoto = () => {
-    Taro.chooseImage({
-      count: 3 - photos.length,
-      success: (res) => {
-        setPhotos([...photos, ...res.tempFilePaths]);
-      }
-    });
   };
 
   return (
@@ -156,31 +148,11 @@ const DiaperEditPage: React.FC = () => {
       </View>
 
       <View className={styles.card}>
-        <View className={styles.sectionTitle}>📷 照片附件（可选）</View>
-        <View className={styles.photoRow}>
-          {photos.map((p, i) => (
-            <View
-              key={i}
-              className={styles.photoSlot}
-              style={{
-                backgroundImage: `url(${p})`,
-                backgroundSize: 'cover',
-                backgroundPosition: 'center'
-              }}
-              onClick={() => {
-                const newPhotos = [...photos];
-                newPhotos.splice(i, 1);
-                setPhotos(newPhotos);
-              }}
-            />
-          ))}
-          {photos.length < 3 && (
-            <View className={styles.photoSlot} onClick={handleAddPhoto}>
-              <Text className={styles.photoIcon}>📷</Text>
-              <Text className={styles.photoText}>添加照片</Text>
-            </View>
-          )}
-        </View>
+        <View className={styles.sectionTitle}>📷 照片附件（可选，最多3张）</View>
+        <ImagePicker photos={photos} onChange={setPhotos} maxCount={3} size={160} />
+        <Text style={{ fontSize: 22, color: '#999', marginTop: 12, display: 'block' }}>
+          支持拍照或从相册选择，点击照片可预览，×号可删除
+        </Text>
       </View>
 
       <View className={styles.bottomBar}>

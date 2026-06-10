@@ -5,13 +5,18 @@ import classnames from 'classnames';
 import styles from './index.module.scss';
 import { useBabyStore } from '@/store';
 import { getBabyAge, dayjs } from '@/utils';
+import { getDateRange, downloadReport } from '@/utils/export';
 
 const MinePage: React.FC = () => {
   const getCurrentBaby = useBabyStore((s) => s.getCurrentBaby);
   const familyMembers = useBabyStore((s) => s.familyMembers);
   const currentUserId = useBabyStore((s) => s.currentUserId);
   const records = useBabyStore((s) => s.records);
+  const reminders = useBabyStore((s) => s.reminders);
   const growthRecords = useBabyStore((s) => s.growthRecords);
+  const getPeriodSummary = useBabyStore((s) => s.getPeriodSummary);
+  const getRecordsByDateRange = useBabyStore((s) => s.getRecordsByDateRange);
+  const resetAll = useBabyStore((s) => s.resetAll);
 
   const currentUser = useMemo(() => {
     return familyMembers.find((m) => m.id === currentUserId);
@@ -29,14 +34,50 @@ const MinePage: React.FC = () => {
       title: '导出记录',
       desc: '导出喂养数据给医生查看',
       onClick: () => {
+        const baby = getCurrentBaby();
+        if (!baby) {
+          Taro.showToast({ title: '请先设置宝宝信息', icon: 'none' });
+          return;
+        }
         Taro.showActionSheet({
-          itemList: ['导出为 Excel', '导出为 PDF', '导出为图片'],
+          itemList: ['导出本周报告', '导出本月报告', '自定义区间（默认本月）'],
           success: (res) => {
-            Taro.showLoading({ title: '正在导出...' });
-            setTimeout(() => {
-              Taro.hideLoading();
-              Taro.showToast({ title: '导出成功', icon: 'success' });
-            }, 1500);
+            let type: 'week' | 'month' = 'month';
+            if (res.tapIndex === 0) type = 'week';
+            else if (res.tapIndex === 1) type = 'month';
+            else type = 'month';
+            const { startDate, endDate } = getDateRange(type);
+            const summary = getPeriodSummary(type);
+            const rangeRecords = getRecordsByDateRange(startDate, endDate);
+            downloadReport({
+              baby,
+              familyMembers,
+              records: rangeRecords,
+              growthRecords,
+              reminders,
+              startDate,
+              endDate,
+              summary
+            });
+          }
+        });
+      }
+    },
+    {
+      id: 'reset',
+      icon: '🔄',
+      iconBg: '#FFE4E6',
+      title: '重置示例数据',
+      desc: '清空所有记录恢复初始示例',
+      onClick: () => {
+        Taro.showModal({
+          title: '确认重置',
+          content: '此操作会清空所有记录并恢复初始示例数据，确定继续吗？',
+          success: (modalRes) => {
+            if (modalRes.confirm) {
+              resetAll();
+              Taro.showToast({ title: '已重置', icon: 'success' });
+            }
           }
         });
       }

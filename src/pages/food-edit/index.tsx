@@ -5,6 +5,7 @@ import classnames from 'classnames';
 import styles from './index.module.scss';
 import { useBabyStore } from '@/store';
 import { dayjs } from '@/utils';
+import ImagePicker from '@/components/ImagePicker';
 
 const commonFoods = ['米糊', '小米粥', '鸡蛋黄', '苹果泥', '香蕉泥', '胡萝卜泥', '南瓜泥', '西兰花', '菠菜泥', '肉泥', '鱼泥', '豆腐'];
 const commonIngredients = ['大米', '小米', '鸡蛋', '苹果', '香蕉', '胡萝卜', '南瓜', '西兰花', '菠菜', '猪肉', '牛肉', '三文鱼', '豆腐'];
@@ -27,6 +28,7 @@ const FoodEditPage: React.FC = () => {
   const [allergy, setAllergy] = useState<'none' | 'rash' | 'vomit' | 'diarrhea' | 'other'>('none');
   const [allergyDetail, setAllergyDetail] = useState('');
   const [note, setNote] = useState('');
+  const [photos, setPhotos] = useState<string[]>([]);
   const [recordTime, setRecordTime] = useState(dayjs().toISOString());
 
   const toggleIngredient = (ing: string) => {
@@ -54,7 +56,8 @@ const FoodEditPage: React.FC = () => {
         allergyReaction: allergy,
         reactionDetail: allergyDetail || undefined,
         time: recordTime,
-        note: note || undefined
+        note: note || undefined,
+        photos: photos.length > 0 ? photos : undefined
       } as any);
       Taro.showToast({ title: '记录成功', icon: 'success' });
       setTimeout(() => Taro.navigateBack(), 800);
@@ -169,6 +172,14 @@ const FoodEditPage: React.FC = () => {
           value={note}
           onInput={(e) => setNote(e.detail.value)}
         />
+      </View>
+
+      <View className={styles.card}>
+        <View className={styles.sectionTitle}>📷 照片附件（可选，最多3张）</View>
+        <ImagePicker photos={photos} onChange={setPhotos} maxCount={3} size={160} />
+        <Text style={{ fontSize: 22, color: '#999', marginTop: 12, display: 'block' }}>
+          可拍照记录食物、餐盒、宝宝进食情况，方便日后回看
+        </Text>
       </View>
 
       <View className={styles.bottomBar}>

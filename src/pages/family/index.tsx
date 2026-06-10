@@ -22,12 +22,19 @@ const FamilyPage: React.FC = () => {
   const addFamilyMember = useBabyStore((s) => s.addFamilyMember);
   const updateFamilyMember = useBabyStore((s) => s.updateFamilyMember);
   const removeFamilyMember = useBabyStore((s) => s.removeFamilyMember);
+  const generateInviteCode = useBabyStore((s) => s.generateInviteCode);
+  const acceptInviteCode = useBabyStore((s) => s.acceptInviteCode);
+  const inviteCode = useBabyStore((s) => s.inviteCode);
+  const canEdit = useBabyStore((s) => s.canEdit);
 
   const [showAddModal, setShowAddModal] = useState(false);
+  const [showJoinModal, setShowJoinModal] = useState(false);
   const [newName, setNewName] = useState('');
   const [newRole, setNewRole] = useState<FamilyMember['role']>('mom');
   const [newRoleName, setNewRoleName] = useState('妈妈');
   const [newCanEdit, setNewCanEdit] = useState(true);
+  const [joinName, setJoinName] = useState('');
+  const [joinCode, setJoinCode] = useState('');
 
   const handleAddMember = () => {
     if (!newName.trim()) {
@@ -74,16 +81,59 @@ const FamilyPage: React.FC = () => {
   };
 
   const handleShare = () => {
-    Taro.showModal({
-      title: '邀请家人加入',
-      content: '方式一：通过微信分享链接邀请\n方式二：生成邀请码让家人输入\n\n家人加入后可共同记录宝宝成长。',
-      confirmText: '去邀请',
+    const code = generateInviteCode();
+    Taro.showActionSheet({
+      itemList: ['① 复制邀请码', '② 分享给微信好友', '③ 输入邀请码加入'],
       success: (res) => {
-        if (res.confirm) {
-          Taro.showToast({ title: '邀请功能开发中', icon: 'none' });
+        switch (res.tapIndex) {
+          case 0:
+            Taro.setClipboardData({
+              data: code,
+              success: () => {
+                Taro.showToast({ title: '邀请码已复制，7天有效', icon: 'success' });
+              }
+            });
+            break;
+          case 1:
+            const shareText = `邀请你加入「宝宝喂养记录」家庭，邀请码：${code}，7天内有效。`;
+            if (typeof navigator !== 'undefined' && (navigator as any)?.share) {
+              (navigator as any).share({
+                title: '邀请加入家庭',
+                text: shareText
+              }).catch(() => {
+                Taro.setClipboardData({ data: code });
+                Taro.showToast({ title: '邀请码已复制', icon: 'success' });
+              });
+            } else {
+              Taro.setClipboardData({
+                data: code,
+                success: () => {
+                  Taro.showToast({ title: '邀请码已复制', icon: 'success' });
+                }
+              });
+            }
+            break;
+          case 2:
+            setShowJoinModal(true);
+            break;
         }
       }
     });
+  };
+
+  const handleJoinFamily = () => {
+    if (!joinName.trim()) {
+      Taro.showToast({ title: '请输入姓名', icon: 'none' });
+      return;
+    }
+    if (!joinCode.trim()) {
+      Taro.showToast({ title: '请输入邀请码', icon: 'none' });
+      return;
+    }
+    acceptInviteCode(joinCode, joinName);
+    setShowJoinModal(false);
+    setJoinName('');
+    setJoinCode('');
   };
 
   const handleSelectRole = (opt: typeof roleOptions[0]) => {
@@ -202,6 +252,32 @@ const FamilyPage: React.FC = () => {
         </View>
       </View>
 
+      <View
+        className={styles.card}
+        style={{ cursor: 'pointer' }}
+        onClick={() => setShowJoinModal(true)}
+      >
+        <View className={styles.sectionTitle}>🔑 加入家庭</View>
+        <View style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 8 }}>
+          <View>
+            <Text style={{ fontSize: 14, color: '#333', fontWeight: 500 }}>已有邀请码？</Text>
+            <Text style={{ fontSize: 12, color: '#999', display: 'block', marginTop: 4 }}>输入家人分享的邀请码加入家庭</Text>
+          </View>
+          <View
+            style={{
+              padding: '12rpx 32rpx',
+              background: 'linear-gradient(135deg, #FF8BA7 0%, #FFB6C1 100%)',
+              color: '#fff',
+              borderRadius: 40,
+              fontSize: 26,
+              fontWeight: 500
+            }}
+          >
+            输入邀请码
+          </View>
+        </View>
+      </View>
+
       {showAddModal && (
         <View className={styles.modalMask} onClick={() => setShowAddModal(false)}>
           <View className={styles.modalContent} onClick={(e) => e.stopPropagation()}>
@@ -284,6 +360,44 @@ const FamilyPage: React.FC = () => {
             <View className={styles.modalBtns}>
               <View className={styles.modalCancel} onClick={() => setShowAddModal(false)}>取消</View>
               <View className={styles.modalConfirm} onClick={handleAddMember}>确认添加</View>
+            </View>
+          </View>
+        </View>
+      )}
+
+      {showJoinModal && (
+        <View className={styles.modalMask} onClick={() => setShowJoinModal(false)}>
+          <View className={styles.modalContent} onClick={(e) => e.stopPropagation()}>
+            <Text className={styles.modalTitle}>加入家庭</Text>
+
+            <View className={styles.formItem}>
+              <Text className={styles.formLabel}>您的姓名</Text>
+              <Input
+                className={styles.formInput}
+                placeholder="请输入您的姓名或称呼"
+                value={joinName}
+                onInput={(e) => setJoinName(e.detail.value)}
+              />
+            </View>
+
+            <View className={styles.formItem}>
+              <Text className={styles.formLabel}>邀请码</Text>
+              <Input
+                className={styles.formInput}
+                placeholder="请输入6位邀请码"
+                value={joinCode}
+                onInput={(e) => setJoinCode(e.detail.value.toUpperCase())}
+                maxlength={6}
+              />
+            </View>
+
+            <View style={{ fontSize: 12, color: '#999', padding: '0 12rpx' }}>
+              💡 邀请码由家人分享生成，7天内有效
+            </View>
+
+            <View className={styles.modalBtns}>
+              <View className={styles.modalCancel} onClick={() => setShowJoinModal(false)}>取消</View>
+              <View className={styles.modalConfirm} onClick={handleJoinFamily}>确认加入</View>
             </View>
           </View>
         </View>

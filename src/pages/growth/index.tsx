@@ -5,6 +5,7 @@ import classnames from 'classnames';
 import styles from './index.module.scss';
 import { useBabyStore } from '@/store';
 import { getBabyAge, dayjs, calcBMI, getBMICategory, roundTo } from '@/utils';
+import { getDateRange, downloadReport, shareReport } from '@/utils/export';
 
 const typeTabs = [
   { key: 'weight', label: '体重', unit: 'kg' },
@@ -20,7 +21,12 @@ const periodTabs = [
 
 const GrowthPage: React.FC = () => {
   const getCurrentBaby = useBabyStore((s) => s.getCurrentBaby);
+  const familyMembers = useBabyStore((s) => s.familyMembers);
+  const records = useBabyStore((s) => s.records);
+  const reminders = useBabyStore((s) => s.reminders);
   const growthRecords = useBabyStore((s) => s.growthRecords);
+  const getPeriodSummary = useBabyStore((s) => s.getPeriodSummary);
+  const getRecordsByDateRange = useBabyStore((s) => s.getRecordsByDateRange);
 
   const [activeType, setActiveType] = useState('weight');
   const [activePeriod, setActivePeriod] = useState('month');
@@ -84,16 +90,31 @@ const GrowthPage: React.FC = () => {
   };
 
   const handleExport = () => {
-    Taro.showModal({
-      title: '导出数据',
-      content: '将宝宝的成长记录导出为PDF，方便带给医生查看。是否继续？',
+    const baby = getCurrentBaby();
+    if (!baby) {
+      Taro.showToast({ title: '请先设置宝宝信息', icon: 'none' });
+      return;
+    }
+    Taro.showActionSheet({
+      itemList: ['导出生成HTML报告（下载）', '分享给医生（复制摘要+下载）'],
       success: (res) => {
-        if (res.confirm) {
-          Taro.showLoading({ title: '正在生成...' });
-          setTimeout(() => {
-            Taro.hideLoading();
-            Taro.showToast({ title: '已生成PDF文件', icon: 'success' });
-          }, 1500);
+        const { startDate, endDate } = getDateRange('month');
+        const summary = getPeriodSummary('month');
+        const rangeRecords = getRecordsByDateRange(startDate, endDate);
+        const params = {
+          baby,
+          familyMembers,
+          records: rangeRecords,
+          growthRecords,
+          reminders,
+          startDate,
+          endDate,
+          summary
+        };
+        if (res.tapIndex === 0) {
+          downloadReport(params);
+        } else if (res.tapIndex === 1) {
+          shareReport(params);
         }
       }
     });

@@ -18,23 +18,42 @@ const typeTabs = [
 const RecordPage: React.FC = () => {
   const records = useBabyStore((s) => s.records);
   const getDailyStats = useBabyStore((s) => s.getDailyStats);
+  const getPeriodSummary = useBabyStore((s) => s.getPeriodSummary);
+  const getRecordsByDateRange = useBabyStore((s) => s.getRecordsByDateRange);
   const deleteRecord = useBabyStore((s) => s.deleteRecord);
 
   const [activeTab, setActiveTab] = useState('all');
   const [selectedDate, setSelectedDate] = useState(dayjs().format('YYYY-MM-DD'));
+  const [periodTab, setPeriodTab] = useState<'today' | 'week' | 'month'>('today');
   const [showFab, setShowFab] = useState(false);
 
+  const currentSummary = useMemo(() => {
+    if (periodTab === 'today') {
+      const s = getDailyStats(selectedDate);
+      return { ...s, startDate: selectedDate, endDate: selectedDate, dayCount: 1 };
+    }
+    if (periodTab === 'week') {
+      return getPeriodSummary('week', selectedDate);
+    }
+    return getPeriodSummary('month', selectedDate);
+  }, [periodTab, selectedDate, getDailyStats, getPeriodSummary]);
+
   const filteredRecords = useMemo(() => {
-    let list = records.filter((r) => formatDate(r.time) === selectedDate);
+    let list: typeof records;
+    if (periodTab === 'today') {
+      list = records.filter((r) => formatDate(r.time) === selectedDate);
+    } else {
+      list = getRecordsByDateRange(currentSummary.startDate, currentSummary.endDate);
+    }
     if (activeTab === 'feeding') {
       list = list.filter((r) => ['breast', 'formula', 'bottle'].includes(r.type));
     } else if (activeTab !== 'all') {
       list = list.filter((r) => r.type === activeTab);
     }
     return list.sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime());
-  }, [records, selectedDate, activeTab]);
+  }, [records, periodTab, selectedDate, activeTab, currentSummary, getRecordsByDateRange]);
 
-  const stats = useMemo(() => getDailyStats(selectedDate), [selectedDate, getDailyStats]);
+  const stats = useMemo(() => currentSummary, [currentSummary]);
 
   const handleDateChange = () => {
     Taro.showActionSheet({
@@ -125,6 +144,38 @@ const RecordPage: React.FC = () => {
           <Text>📅</Text>
           <Text>{selectedDate === dayjs().format('YYYY-MM-DD') ? '今天' : selectedDate}</Text>
         </View>
+        <View style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          <View
+            style={{
+              padding: '6rpx 20rpx',
+              borderRadius: 20,
+              fontSize: 24,
+              background: periodTab === 'today' ? '#FF8BA7' : '#f5f5f5',
+              color: periodTab === 'today' ? '#fff' : '#666'
+            }}
+            onClick={() => setPeriodTab('today')}
+          >今日</View>
+          <View
+            style={{
+              padding: '6rpx 20rpx',
+              borderRadius: 20,
+              fontSize: 24,
+              background: periodTab === 'week' ? '#FF8BA7' : '#f5f5f5',
+              color: periodTab === 'week' ? '#fff' : '#666'
+            }}
+            onClick={() => setPeriodTab('week')}
+          >本周</View>
+          <View
+            style={{
+              padding: '6rpx 20rpx',
+              borderRadius: 20,
+              fontSize: 24,
+              background: periodTab === 'month' ? '#FF8BA7' : '#f5f5f5',
+              color: periodTab === 'month' ? '#fff' : '#666'
+            }}
+            onClick={() => setPeriodTab('month')}
+          >本月</View>
+        </View>
         <View className={styles.filterActions}>
           <View className={styles.filterBtn} onClick={() => Taro.showToast({ title: '搜索', icon: 'none' })}>
             🔍 搜索
@@ -138,7 +189,10 @@ const RecordPage: React.FC = () => {
       <ScrollView scrollY>
         <View className={styles.statsSummary}>
           <View className={styles.summaryTitle}>
-            {selectedDate === dayjs().format('YYYY-MM-DD') ? '今日' : selectedDate} 统计摘要
+            {periodTab === 'today'
+              ? (selectedDate === dayjs().format('YYYY-MM-DD') ? '今日' : selectedDate)
+              : periodTab === 'week' ? `本周（${currentSummary.startDate}~${currentSummary.endDate}）`
+              : `本月（${currentSummary.startDate}~${currentSummary.endDate}）`} 统计摘要
           </View>
           <View className={styles.summaryGrid}>
             <View className={styles.summaryItem}>
@@ -146,12 +200,24 @@ const RecordPage: React.FC = () => {
               <View className={styles.summaryLabel}>喂奶次数</View>
             </View>
             <View className={styles.summaryItem}>
+              <View className={styles.summaryValue}>{stats.feedingTotalAmount}ml</View>
+              <View className={styles.summaryLabel}>奶量</View>
+            </View>
+            <View className={styles.summaryItem}>
+              <View className={styles.summaryValue}>{formatDuration(stats.breastTotalDuration)}</View>
+              <View className={styles.summaryLabel}>亲喂时长</View>
+            </View>
+            <View className={styles.summaryItem}>
               <View className={styles.summaryValue}>{stats.diaperCount}</View>
               <View className={styles.summaryLabel}>换尿布</View>
             </View>
             <View className={styles.summaryItem}>
-              <View className={styles.summaryValue}>{formatDuration(stats.sleepTotalDuration)}</View>
+              <View className={styles.summaryValue}>{`${Math.floor(stats.sleepTotalDuration / 60)}h${stats.sleepTotalDuration % 60}m`}</View>
               <View className={styles.summaryLabel}>睡眠时长</View>
+            </View>
+            <View className={styles.summaryItem}>
+              <View className={styles.summaryValue}>{stats.foodCount}</View>
+              <View className={styles.summaryLabel}>辅食次数</View>
             </View>
           </View>
         </View>

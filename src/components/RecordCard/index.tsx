@@ -1,5 +1,6 @@
-import React from 'react';
-import { View, Text } from '@tarojs/components';
+import React, { useCallback } from 'react';
+import { View, Text, Image } from '@tarojs/components';
+import Taro from '@tarojs/taro';
 import classnames from 'classnames';
 import styles from './index.module.scss';
 import type { AllRecord } from '@/types';
@@ -17,6 +18,12 @@ const RecordCard: React.FC<RecordCardProps> = ({ record, onClick, compact }) => 
   const member = getMemberById(record.createdBy);
   const typeColor = getRecordTypeColor(record.type);
   const typeLabel = getRecordTypeLabel(record.type);
+  const photos = record.photos || [];
+
+  const handlePreviewPhoto = useCallback((index: number, e: any) => {
+    e.stopPropagation?.();
+    Taro.previewImage({ current: photos[index], urls: photos });
+  }, [photos]);
 
   const renderDetail = () => {
     switch (record.type) {
@@ -156,6 +163,18 @@ const RecordCard: React.FC<RecordCardProps> = ({ record, onClick, compact }) => 
         <View className={styles.note}>
           <Text className={styles.noteLabel}>备注：</Text>
           <Text className={styles.noteText}>{record.note}</Text>
+        </View>
+      )}
+      {photos.length > 0 && !compact && (
+        <View className={styles.photos}>
+          {photos.slice(0, 4).map((src, i) => (
+            <View key={i} className={styles.photoItem} onClick={(e) => handlePreviewPhoto(i, e)}>
+              <Image className={styles.photoImg} src={src} mode='aspectFill' />
+              {i === 3 && photos.length > 4 && (
+                <View className={styles.photoCount}>+{photos.length - 4}</View>
+              )}
+            </View>
+          ))}
         </View>
       )}
     </View>

@@ -6,6 +6,7 @@ import styles from './index.module.scss';
 import { useBabyStore } from '@/store';
 import { dayjs } from '@/utils';
 import type { SleepQuality } from '@/types';
+import ImagePicker from '@/components/ImagePicker';
 
 const qualityOptions = [
   { key: 'good' as SleepQuality, label: '很好', emoji: '😴', desc: '一觉到天亮' },
@@ -26,6 +27,7 @@ const SleepEditPage: React.FC = () => {
   const [quality, setQuality] = useState<SleepQuality>('normal');
   const [selectedEnvs, setSelectedEnvs] = useState<string[]>([]);
   const [note, setNote] = useState('');
+  const [photos, setPhotos] = useState<string[]>([]);
   const [isRunning, setIsRunning] = useState(false);
   const [liveSeconds, setLiveSeconds] = useState(0);
 
@@ -97,7 +99,8 @@ const SleepEditPage: React.FC = () => {
         quality,
         environment: envText || undefined,
         time: startTime,
-        note: note || undefined
+        note: note || undefined,
+        photos: photos.length > 0 ? photos : undefined
       } as any);
       Taro.showToast({ title: '记录成功', icon: 'success' });
       setTimeout(() => Taro.navigateBack(), 800);
@@ -260,6 +263,14 @@ const SleepEditPage: React.FC = () => {
           value={note}
           onInput={(e) => setNote(e.detail.value)}
         />
+      </View>
+
+      <View className={styles.card}>
+        <View className={styles.sectionTitle}>📷 照片附件（可选，最多3张）</View>
+        <ImagePicker photos={photos} onChange={setPhotos} maxCount={3} size={160} />
+        <Text style={{ fontSize: 22, color: '#999', marginTop: 12, display: 'block' }}>
+          可拍照记录宝宝睡姿、睡眠环境、安抚物品等
+        </Text>
       </View>
 
       <View className={styles.bottomBar}>

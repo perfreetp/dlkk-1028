@@ -5,6 +5,7 @@ import classnames from 'classnames';
 import styles from './index.module.scss';
 import { useBabyStore } from '@/store';
 import { dayjs } from '@/utils';
+import ImagePicker from '@/components/ImagePicker';
 
 type FeedingType = 'breast' | 'formula' | 'bottle';
 
@@ -15,6 +16,7 @@ const FeedingEditPage: React.FC = () => {
   const [type, setType] = useState<FeedingType>((router.params.type as FeedingType) || 'breast');
   const [recordTime, setRecordTime] = useState(dayjs().toISOString());
   const [note, setNote] = useState('');
+  const [photos, setPhotos] = useState<string[]>([]);
 
   // Breast feeding
   const [side, setSide] = useState<'left' | 'right' | 'both'>('both');
@@ -91,7 +93,8 @@ const FeedingEditPage: React.FC = () => {
           rightDuration: side !== 'left' ? rightDuration : undefined,
           totalDuration: total,
           time: now,
-          note: note || undefined
+          note: note || undefined,
+          photos: photos.length > 0 ? photos : undefined
         } as any);
       } else if (type === 'formula') {
         addRecord({
@@ -101,7 +104,8 @@ const FeedingEditPage: React.FC = () => {
           waterTemp,
           brand,
           time: now,
-          note: note || undefined
+          note: note || undefined,
+          photos: photos.length > 0 ? photos : undefined
         } as any);
       } else {
         addRecord({
@@ -110,7 +114,8 @@ const FeedingEditPage: React.FC = () => {
           amount,
           duration: bottleDuration,
           time: now,
-          note: note || undefined
+          note: note || undefined,
+          photos: photos.length > 0 ? photos : undefined
         } as any);
       }
       Taro.showToast({ title: '记录成功', icon: 'success' });
@@ -329,14 +334,14 @@ const FeedingEditPage: React.FC = () => {
             onInput={(e) => setNote(e.detail.value)}
           />
         </View>
-        <View className={styles.photoSection}>
-          <View className={styles.textareaLabel}>📷 添加照片</View>
-          <View className={styles.photoGrid}>
-            <View className={classnames(styles.photoItem, styles.add)} onClick={() => Taro.showToast({ title: '选择图片', icon: 'none' })}>
-              ＋
-            </View>
-          </View>
-        </View>
+      </View>
+
+      <View className={styles.card}>
+        <View className={styles.sectionTitle}>📷 照片附件（可选，最多3张）</View>
+        <ImagePicker photos={photos} onChange={setPhotos} maxCount={3} size={160} />
+        <Text style={{ fontSize: 22, color: '#999', marginTop: 12, display: 'block' }}>
+          可拍照记录喂奶姿势、奶量、宝宝状态等
+        </Text>
       </View>
 
       <View className={styles.bottomBar}>
